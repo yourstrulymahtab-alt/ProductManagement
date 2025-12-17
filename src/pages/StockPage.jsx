@@ -38,8 +38,12 @@ function StockPage() {
       // Try to get product name from joined field or fallback to product_id
       const name = t.productName || t.product_name || t.product_id;
       if (!stats[name]) stats[name] = { qty: 0, price: 0 };
-      stats[name].qty += t.quantity;
-      stats[name].price += t.quantity * t.price;
+      const qty = Number(t.quantity);
+      let txnPrice = t.transactionPrice ?? t.transaction_price ?? t.price;
+      txnPrice = Number(txnPrice);
+      // Only add if both are valid numbers
+      if (!isNaN(qty)) stats[name].qty += qty;
+      if (!isNaN(qty) && !isNaN(txnPrice)) stats[name].price += qty * txnPrice;
     });
     let max = null;
     for (const [name, s] of Object.entries(stats)) {

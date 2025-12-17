@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getProducts, getTransactions, addTransaction, clearTransactions } from '../api/supabaseApi';
+import { PRODUCT_SALES_TYPE } from '../api/productModel';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Snackbar, IconButton, Grid, useMediaQuery, Select, MenuItem } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -10,7 +11,15 @@ function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
   const [products, setProducts] = useState([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ productId: '', quantity: '', price: '', transactionType: 'buy', personName: '', contact: '' });
+  const [form, setForm] = useState({
+    productId: '',
+    quantity: '',
+    transactionPrice: '',
+    amountPaid: '',
+    transactionType: 'buy',
+    personName: '',
+    contact: '',
+  });
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -27,7 +36,7 @@ function TransactionsPage() {
   useEffect(() => { fetchData(); }, []);
 
   const handleAdd = async () => {
-    if (!form.productId || !form.quantity || !form.price || !form.transactionType || !form.personName || !form.contact) {
+    if (!form.productId || !form.quantity || !form.transactionPrice || !form.amountPaid || !form.transactionType || !form.personName || !form.contact) {
       setSnackbar({ open: true, message: 'All fields are required.' });
       return;
     }
@@ -36,20 +45,26 @@ function TransactionsPage() {
       setSnackbar({ open: true, message: 'Product not found.' });
       return;
     }
-    if (form.transactionType === 'sell' && product.stock < parseInt(form.quantity)) {
+    if (form.transactionType === 'sell' && product.stock < parseFloat(form.quantity)) {
       setSnackbar({ open: true, message: 'Insufficient stock.' });
       return;
     }
+    // Calculate actual price (from product cp/sp)
+    const actualPrice = form.transactionType === 'buy' ? product.costPrice : product.sellPrice;
+    const totalPrice = parseFloat(form.transactionPrice) * parseFloat(form.quantity);
     try {
       await addTransaction({
         product_id: parseInt(form.productId),
-        quantity: parseInt(form.quantity),
-        price: parseFloat(form.price),
+        quantity: parseFloat(form.quantity),
+        actualPrice: parseFloat(actualPrice),
+        transactionPrice: parseFloat(form.transactionPrice),
+        totalPrice,
+        amountPaid: parseFloat(form.amountPaid),
         transaction_type: form.transactionType,
         person_name: form.personName,
         contact: form.contact,
       });
-      setForm({ productId: '', quantity: '', price: '', transactionType: 'buy', personName: '', contact: '' });
+      setForm({ productId: '', quantity: '', transactionPrice: '', amountPaid: '', transactionType: 'buy', personName: '', contact: '' });
       setOpen(false);
       fetchData();
       setSnackbar({ open: true, message: 'Transaction added.' });
@@ -85,7 +100,10 @@ function TransactionsPage() {
               <TableCell>ID</TableCell>
               <TableCell>Product Name</TableCell>
               <TableCell>Quantity</TableCell>
-              <TableCell>Price</TableCell>
+              <TableCell>Actual Price</TableCell>
+              <TableCell>Transaction Price</TableCell>
+              <TableCell>Total Price</TableCell>
+              <TableCell>Amount Paid</TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Date</TableCell>
               <TableCell>Person</TableCell>
@@ -98,7 +116,10 @@ function TransactionsPage() {
                 <TableCell>{t.id}</TableCell>
                 <TableCell>{t.productName}</TableCell>
                 <TableCell>{t.quantity}</TableCell>
-                <TableCell>{t.price}</TableCell>
+                <TableCell>{t.actualPrice ?? t.actual_price ?? ''}</TableCell>
+                <TableCell>{t.transactionPrice ?? t.transaction_price ?? ''}</TableCell>
+                <TableCell>{t.totalPrice ?? t.total_price ?? ''}</TableCell>
+                <TableCell>{t.amountPaid ?? t.amount_paid ?? ''}</TableCell>
                 <TableCell>{t.transactionType || t.transaction_type}</TableCell>
                 <TableCell>{t.transactionDate || t.transaction_date}</TableCell>
                 <TableCell>{t.personName || t.person_name}</TableCell>
@@ -112,11 +133,29 @@ function TransactionsPage() {
         <DialogTitle>Add Transaction</DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Select fullWidth value={form.transactionType} onChange={e => setForm(f => ({ ...f, transactionType: e.target.value }))} sx={{ mt: 1 }}>
+                <MenuItem value="buy">Buy</MenuItem>
+                <MenuItem value="sell">Sell</MenuItem>
+              </Select>
+            </Grid>
+            <Grid item xs={12} sm={6} />
             <Grid item xs={12}>
               <Select
                 fullWidth
                 value={form.productId}
-                onChange={e => setForm(f => ({ ...f, productId: e.target.value }))}
+                onChange={e => setForm(f => {
+                  const product = products.find(p => p.id === parseInt(e.target.value));
+                  let actualPrice = '';
+                  if (product && form.transactionType) {
+                    actualPrice = form.transactionType === 'buy' ? product.costPrice : product.sellPrice;
+                  }
+                  return {
+                    ...f,
+                    productId: e.target.value,
+                    transactionPrice: actualPrice !== '' ? actualPrice : f.transactionPrice,
+                  };
+                })}
                 displayEmpty
                 sx={{ mt: 1 }}
                 disabled={products.length === 0}
@@ -136,13 +175,27 @@ function TransactionsPage() {
               <TextField label="Quantity" type="number" fullWidth margin="dense" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Price" type="number" fullWidth margin="dense" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
+              <TextField
+                label="Transaction Price (per unit/kg)"
+                type="number"
+                fullWidth
+                margin="dense"
+                value={form.transactionPrice}
+                onChange={e => setForm(f => ({ ...f, transactionPrice: e.target.value }))}
+                onFocus={e => {
+                  // Set default value if empty and product/type selected
+                  if (!form.transactionPrice && form.productId && form.transactionType) {
+                    const product = products.find(p => p.id === parseInt(form.productId));
+                    if (product) {
+                      const actualPrice = form.transactionType === 'buy' ? product.costPrice : product.sellPrice;
+                      setForm(f => ({ ...f, transactionPrice: actualPrice }));
+                    }
+                  }
+                }}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Select fullWidth value={form.transactionType} onChange={e => setForm(f => ({ ...f, transactionType: e.target.value }))} sx={{ mt: 1 }}>
-                <MenuItem value="buy">Buy</MenuItem>
-                <MenuItem value="sell">Sell</MenuItem>
-              </Select>
+              <TextField label="Amount Paid" type="number" fullWidth margin="dense" value={form.amountPaid} onChange={e => setForm(f => ({ ...f, amountPaid: e.target.value }))} />
             </Grid>
             <Grid item xs={12} sm={6} />
             <Grid item xs={12} sm={6}>
