@@ -65,7 +65,7 @@ function LedgerPage() {
       <Typography variant="h5" gutterBottom>Ledger Accounts</Typography>
       {ledger.map((entry, idx) => (
         <Box key={idx} sx={{ mb: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
-          <Typography variant="h6">{entry.person} ({entry.contact})</Typography>
+          <Typography variant="h6" sx={{ color: 'blue' }}>{entry.person} ({entry.contact})</Typography>
           <Typography color={entry.totalToTake > 0 ? 'error' : 'primary'}>
             {entry.totalToTake > 0 ? `Total to Take: ₹${entry.totalToTake.toFixed(2)}` : `Total to Give: ₹${entry.totalToGive.toFixed(2)}`}
           </Typography>
