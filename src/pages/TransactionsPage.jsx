@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { getProducts, getTransactions, addTransaction, clearTransactions } from '../api/supabaseApi';
 import { PRODUCT_SALES_TYPE } from '../api/productModel';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Snackbar, IconButton, Grid, useMediaQuery, Select, MenuItem } from '@mui/material';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Snackbar, IconButton, Grid, useMediaQuery, Select, MenuItem, Autocomplete } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -133,43 +133,35 @@ function TransactionsPage() {
         <DialogTitle>Add Transaction</DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12}>
               <Select fullWidth value={form.transactionType} onChange={e => setForm(f => ({ ...f, transactionType: e.target.value }))} sx={{ mt: 1 }}>
                 <MenuItem value="buy">Buy</MenuItem>
                 <MenuItem value="sell">Sell</MenuItem>
               </Select>
             </Grid>
-            <Grid item xs={12} sm={6} />
             <Grid item xs={12}>
-              <Select
+              <Autocomplete
                 fullWidth
-                value={form.productId}
-                onChange={e => setForm(f => {
-                  const product = products.find(p => p.id === parseInt(e.target.value));
-                  let actualPrice = '';
-                  if (product && form.transactionType) {
-                    actualPrice = form.transactionType === 'buy' ? product.costPrice : product.sellPrice;
-                  }
-                  return {
-                    ...f,
-                    productId: e.target.value,
-                    transactionPrice: actualPrice !== '' ? actualPrice : f.transactionPrice,
-                  };
-                })}
-                displayEmpty
-                sx={{ mt: 1 }}
-                disabled={products.length === 0}
-                renderValue={selected => {
-                  if (!selected) return 'Select Product';
-                  const prod = products.find(p => p.id === parseInt(selected));
-                  return prod ? prod.name : 'Select Product';
+                options={products}
+                getOptionLabel={(option) => option.name || ''}
+                value={products.find(p => p.id === parseInt(form.productId)) || null}
+                onChange={(event, newValue) => {
+                  setForm(f => {
+                    const product = newValue;
+                    let actualPrice = '';
+                    if (product && form.transactionType) {
+                      actualPrice = form.transactionType === 'buy' ? product.costPrice : product.sellPrice;
+                    }
+                    return {
+                      ...f,
+                      productId: product ? product.id.toString() : '',
+                      transactionPrice: actualPrice !== '' ? actualPrice : f.transactionPrice,
+                    };
+                  });
                 }}
-              >
-                <MenuItem value="" disabled>Select Product</MenuItem>
-                {products.map(p => (
-                  <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
-                ))}
-              </Select>
+                renderInput={(params) => <TextField {...params} label="Select Product" sx={{ mt: 1, '& .MuiInputBase-root': { height: 56 } }} />}
+                disabled={products.length === 0}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField label="Quantity" type="number" fullWidth margin="dense" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
@@ -197,11 +189,10 @@ function TransactionsPage() {
             <Grid item xs={12} sm={6}>
               <TextField label="Amount Paid" type="number" fullWidth margin="dense" value={form.amountPaid} onChange={e => setForm(f => ({ ...f, amountPaid: e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6} />
             <Grid item xs={12} sm={6}>
               <TextField label="Buyer/Seller Name" fullWidth margin="dense" value={form.personName} onChange={e => setForm(f => ({ ...f, personName: e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12}>
               <TextField label="Contact Number" fullWidth margin="dense" value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} />
             </Grid>
           </Grid>
