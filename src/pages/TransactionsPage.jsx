@@ -129,17 +129,20 @@ function TransactionsPage() {
           </TableBody>
         </Table>
       </TableContainer>
-      <Dialog open={open} onClose={() => setOpen(false)} fullScreen={isMobile} maxWidth="xs" fullWidth>
+      <Dialog open={open} onClose={() => setOpen(false)} fullScreen={isMobile} maxWidth="md" fullWidth>
         <DialogTitle>Add Transaction</DialogTitle>
         <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
+          <Grid container
+            spacing={2}
+            direction="column" 
+            >
+            <Grid item xs={12} sm={6}>
               <Select fullWidth value={form.transactionType} onChange={e => setForm(f => ({ ...f, transactionType: e.target.value }))} sx={{ mt: 1 }}>
                 <MenuItem value="buy">Buy</MenuItem>
                 <MenuItem value="sell">Sell</MenuItem>
               </Select>
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6} md={6}>
               <Autocomplete
                 fullWidth
                 options={products}
@@ -159,7 +162,7 @@ function TransactionsPage() {
                     };
                   });
                 }}
-                renderInput={(params) => <TextField {...params} label="Select Product" sx={{ mt: 1, '& .MuiInputBase-root': { height: 56 } }} />}
+                renderInput={(params) => <TextField {...params} label="Select Product" fullWidth sx={{ mt: 1, '& .MuiInputBase-root': { height: 56 } }} />}
                 disabled={products.length === 0}
               />
             </Grid>
