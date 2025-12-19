@@ -65,3 +65,23 @@ export const clearTransactions = async () => {
   const { error } = await supabase.from('transactions').delete();
   if (error) throw error;
 };
+
+export const getUniqueCustomers = async () => {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('person_name, contact')
+    .neq('person_name', null)
+    .neq('contact', null);
+  if (error) throw error;
+  // Deduplicate by name/contact
+  const seen = new Set();
+  const unique = [];
+  for (const row of data) {
+    const key = `${row.person_name}|${row.contact}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(row);
+    }
+  }
+  return unique;
+};
