@@ -66,6 +66,28 @@ function BillingPage() {
         return;
       }
     }
+
+    // Validate aggregated sell quantities against product stock
+    const sellTotalsByProduct = {};
+    for (const t of transactions) {
+      if (t.transactionType === 'sell') {
+        const pid = parseInt(t.productId);
+        sellTotalsByProduct[pid] = (sellTotalsByProduct[pid] || 0) + parseFloat(t.quantity);
+      }
+    }
+    for (const pidStr of Object.keys(sellTotalsByProduct)) {
+      const pid = parseInt(pidStr);
+      const prod = products.find(p => p.id === pid);
+      if (!prod) {
+        setSnackbar({ open: true, message: `Product not found for id ${pid}` });
+        return;
+      }
+      if (prod.stock < sellTotalsByProduct[pid]) {
+        setSnackbar({ open: true, message: `Insufficient stock for product ${prod.name}. Available: ${prod.stock}, requested: ${sellTotalsByProduct[pid]}` });
+        return;
+      }
+    }
+
     try {
       for (const t of transactions) {
         await addTransaction({

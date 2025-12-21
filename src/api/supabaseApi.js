@@ -45,15 +45,20 @@ export const addTransaction = async (txn) => {
     if (error) throw error;
   } else {
     // Insert transaction
-    const { error } = await supabase.from('transactions').insert([txn]);
-    if (error) throw error;
+    const { error: insertErr } = await supabase.from('transactions').insert([txn]);
+    if (insertErr) throw insertErr;
     // Update product stock
-    const { data: product } = await supabase.from('products').select('stock').eq('id', txn.product_id).single();
+    const { data: product, error: prodErr } = await supabase.from('products').select('stock').eq('id', txn.product_id).single();
+    if (prodErr) throw prodErr;
     if (!product) throw new Error('Product not found');
     let newStock = product.stock;
     if (txn.transaction_type === 'buy') {
       newStock += txn.quantity;
     } else if (txn.transaction_type === 'sell') {
+      // Ensure enough stock before subtracting
+      if (newStock < txn.quantity) {
+        throw new Error('Insufficient stock');
+      }
       newStock -= txn.quantity;
     }
     const { error: stockError } = await supabase.from('products').update({ stock: newStock }).eq('id', txn.product_id);
