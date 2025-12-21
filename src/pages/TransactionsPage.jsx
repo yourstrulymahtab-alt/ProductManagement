@@ -1,16 +1,19 @@
 // ...existing code...
 
 import React, { useEffect, useState } from 'react';
-import { getProducts, getTransactions, addTransaction, clearTransactions } from '../api/supabaseApi';
+import { getProducts, getTransactions, addTransaction, clearTransactions, reverseTransaction } from '../api/supabaseApi';
 import { PRODUCT_SALES_TYPE } from '../api/productModel';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Snackbar, IconButton, Grid, useMediaQuery, Select, MenuItem, Autocomplete } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ReplayIcon from '@mui/icons-material/Replay';
 
 function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
   const [products, setProducts] = useState([]);
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedTxn, setSelectedTxn] = useState(null);
   const [form, setForm] = useState({
     productId: '',
     quantity: '',
@@ -83,6 +86,24 @@ function TransactionsPage() {
     }
   };
 
+  const handleReverseClick = (txn) => {
+    setSelectedTxn(txn);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmReverse = async () => {
+    if (!selectedTxn) return;
+    try {
+      await reverseTransaction(selectedTxn.id);
+      setSnackbar({ open: true, message: 'Transaction reversed.' });
+      setConfirmOpen(false);
+      setSelectedTxn(null);
+      fetchData();
+    } catch (e) {
+      setSnackbar({ open: true, message: e.message });
+    }
+  };
+
   return (
     <Box sx={{ maxWidth: 1000, mx: 'auto', p: isMobile ? 1 : 3 }}>
       <Grid container alignItems="center" justifyContent="space-between" spacing={2} sx={{ mb: 2 }}>
@@ -108,6 +129,7 @@ function TransactionsPage() {
               <TableCell>Date</TableCell>
               <TableCell>Person</TableCell>
               <TableCell>Contact</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -120,15 +142,21 @@ function TransactionsPage() {
                 <TableCell>{t.transactionPrice ?? t.transaction_price ?? ''}</TableCell>
                 <TableCell>{t.totalPrice ?? t.total_price ?? ''}</TableCell>
                 <TableCell>{t.amountPaid ?? t.amount_paid ?? ''}</TableCell>
-                <TableCell>{t.transactionType || t.transaction_type}</TableCell>
+                <TableCell>{t.transactionType || t.transaction_type}{t.reversed ? ' (reversed)' : ''}</TableCell>
                 <TableCell>{t.transactionDate || t.transaction_date}</TableCell>
                 <TableCell>{t.personName || t.person_name}</TableCell>
                 <TableCell>{t.contact}</TableCell>
+                <TableCell>
+                  <IconButton size="small" onClick={() => handleReverseClick(t)} disabled={t.reversed} title="Reverse transaction">
+                    <ReplayIcon />
+                  </IconButton>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
       <Dialog open={open} onClose={() => setOpen(false)} fullScreen={isMobile} maxWidth="md" fullWidth>
         <DialogTitle>Add Transaction</DialogTitle>
         <DialogContent>
@@ -205,6 +233,26 @@ function TransactionsPage() {
           <Button onClick={handleAdd} variant="contained">Add</Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Confirm Reverse</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to reverse the selected transaction?</Typography>
+          {selectedTxn && (
+            <Box sx={{ mt: 2 }}>
+              <Typography><strong>Transaction ID:</strong> {selectedTxn.id}</Typography>
+              <Typography><strong>Product:</strong> {selectedTxn.productName}</Typography>
+              <Typography><strong>Quantity:</strong> {selectedTxn.quantity}</Typography>
+              <Typography><strong>Type:</strong> {selectedTxn.transactionType || selectedTxn.transaction_type}</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirmReverse} variant="contained" color="warning">Reverse</Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar open={snackbar.open} autoHideDuration={2000} onClose={() => setSnackbar({ open: false, message: '' })} message={snackbar.message} />
     </Box>
   );

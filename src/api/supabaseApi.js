@@ -12,7 +12,7 @@ export const getProducts = async () => {
 export const addProduct = async (product) => {
   if (product.isEdit && product.id) {
     // Remove isEdit before update
-    const { id, isEdit, ...updateFields } = product;
+    const { id, isEdit: _isEdit, ...updateFields } = product;
     const { error } = await supabase.from('products').update(updateFields).eq('id', id);
     if (error) throw error;
   } else {
@@ -59,6 +59,41 @@ export const addTransaction = async (txn) => {
     const { error: stockError } = await supabase.from('products').update({ stock: newStock }).eq('id', txn.product_id);
     if (stockError) throw stockError;
   }
+};
+
+// Reverse a transaction: adjust product stock in the opposite direction and mark transaction as reversed
+export const reverseTransaction = async (txnId) => {
+  // Load transaction
+  const { data: txn, error: txnErr } = await supabase.from('transactions').select('*').eq('id', txnId).single();
+  if (txnErr) throw txnErr;
+  if (!txn) throw new Error('Transaction not found');
+  if (txn.reversed) throw new Error('Transaction already reversed');
+
+  // Load product
+  const { data: product, error: prodErr } = await supabase.from('products').select('stock').eq('id', txn.product_id).single();
+  if (prodErr) throw prodErr;
+  if (!product) throw new Error('Product not found');
+
+  let newStock = product.stock;
+  if (txn.transaction_type === 'sell') {
+    // Sell reversed -> add quantity back
+    newStock += txn.quantity;
+  } else if (txn.transaction_type === 'buy') {
+    // Buy reversed -> remove quantity from stock
+    newStock -= txn.quantity;
+    if (newStock < 0) {
+      throw new Error('Cannot reverse buy transaction because product stock would become negative');
+    }
+  }
+
+  const { error: stockError } = await supabase.from('products').update({ stock: newStock }).eq('id', txn.product_id);
+  if (stockError) throw stockError;
+
+  // Mark transaction as reversed (and store timestamp)
+  const { error: updateErr } = await supabase.from('transactions').update({ reversed: true, reversed_at: new Date().toISOString() }).eq('id', txnId);
+  if (updateErr) throw updateErr;
+
+  return true;
 };
 
 export const clearTransactions = async () => {
