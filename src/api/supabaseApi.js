@@ -40,9 +40,25 @@ export const getTransactions = async () => {
 export const addTransaction = async (txn) => {
   if (txn.id) {
     // Update transaction
+    // First, get the current transaction to check for changes
+    const { data: currentTxn, error: fetchErr } = await supabase.from('transactions').select('*').eq('id', txn.id).single();
+    if (fetchErr) throw fetchErr;
+    if (!currentTxn) throw new Error('Transaction not found');
+
     const { id, ...updateFields } = txn;
     const { error } = await supabase.from('transactions').update(updateFields).eq('id', id);
     if (error) throw error;
+
+    // If amountPaid changed, record adjustment
+    if (updateFields.amountPaid !== undefined && updateFields.amountPaid !== currentTxn.amount_paid) {
+      await addAmountAdjustment({
+        transaction_id: id,
+        old_amount: currentTxn.amount_paid,
+        new_amount: updateFields.amountPaid,
+        adjustment_date: new Date().toISOString(),
+        reason: 'Manual adjustment'
+      });
+    }
   } else {
     // For sell transactions, check stock before inserting
     if (txn.transaction_type === 'sell') {
@@ -129,4 +145,21 @@ export const getUniqueCustomers = async () => {
     }
   }
   return unique;
+};
+
+// LEDGER ADJUSTMENTS
+export const getLedgerAdjustments = async (personName, contact) => {
+  const { data, error } = await supabase
+    .from('ledger_adjustments')
+    .select('*')
+    .eq('person_name', personName)
+    .eq('contact', contact)
+    .order('adjustment_date', { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
+export const addLedgerAdjustment = async (adjustment) => {
+  const { error } = await supabase.from('ledger_adjustments').insert([adjustment]);
+  if (error) throw error;
 };

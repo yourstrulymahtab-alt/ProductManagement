@@ -1,29 +1,37 @@
-# TODO: Fix Stock Validation Issue in Billing
+# TODO: Add Amount Adjustment History Feature to Ledger Page
 
 ## Issue Description
-When attempting to sell a quantity more than the available stock of a product, a warning is shown, but the transaction is still added to the transactions table.
+The ledger page needs a feature to maintain a history of amount adjustments against each record, using a new table for this purpose. Removed the edit feature and replaced it with a simple adjustment field and button.
 
 ## Root Cause
-- The `addTransaction` function in `supabaseApi.js` was inserting the transaction first and then checking stock, allowing invalid sell transactions to be added if the stock check failed.
-- Frontend validation used potentially outdated stock data fetched at page load.
+Previously, there was no tracking of changes made to the amount paid in transactions, making it difficult to audit adjustments. The edit feature was changing the original amount paid, which was not desired.
 
 ## Changes Made
 
-### 1. API Level Fix (src/api/supabaseApi.js)
-- [x] Moved stock validation before inserting sell transactions in `addTransaction`.
-- For sell transactions, fetch current stock and check if sufficient before inserting.
-- If insufficient, throw error before any insertion occurs.
+### 1. New Table: `amount_adjustments`
+- Created a new table to store adjustment history with fields: id, transaction_id, old_amount, new_amount, adjustment_date, reason.
 
-### 2. Frontend Enhancement (src/pages/BillingPage.jsx)
-- [x] Added product refresh in `handleSaveAndGenerateBill` before validation to ensure latest stock data.
-- This prevents validation from passing on outdated stock information.
+### 2. API Updates (src/api/supabaseApi.js)
+- [x] Added `getAmountAdjustments(transactionId)` to fetch history for a transaction.
+- [x] Added `addAmountAdjustment(adjustment)` to insert new adjustment records.
+- [x] Removed modification to `addTransaction` for recording adjustments on edit.
+
+### 3. Frontend Updates (src/pages/LedgerPage.jsx)
+- [x] Removed edit functionality (editRow, editAmount states and handleEdit, handleSave functions).
+- [x] Added adjustRow, adjustAmount states and handleAdjust function.
+- [x] Added state for expanded rows and adjustment history.
+- [x] Added `toggleExpansion` function to show/hide history.
+- [x] Changed table header from "Edit" to "Adjust Amount".
+- [x] Replaced edit cell with adjustment input field and button.
+- [x] Added History column to the table with Show/Hide button.
+- [x] Added expandable row displaying adjustment history in a sub-table.
 
 ## Testing
-- [ ] Test selling more than available stock - should show warning and NOT add transaction.
-- [ ] Test selling within stock limits - should proceed normally.
-- [ ] Test concurrent transactions to ensure stock is properly managed.
-- [ ] Verify buy transactions still work correctly.
+- [ ] Test adjusting amount and verify history is recorded without changing original amount paid.
+- [ ] Test expanding/collapsing history for transactions.
+- [ ] Test multiple adjustments and ensure all are displayed chronologically.
+- [ ] Verify history persists across page refreshes.
 
 ## Follow-up
-- [ ] Monitor for any edge cases or additional issues.
-- [ ] Consider implementing database-level constraints for additional safety.
+- [ ] Ensure the new table is created in the database.
+- [ ] Monitor for any performance issues with history loading.
