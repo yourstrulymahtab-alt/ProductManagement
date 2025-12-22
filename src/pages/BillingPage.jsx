@@ -67,6 +67,15 @@ function BillingPage() {
       }
     }
 
+    // Refresh products to get latest stock
+    try {
+      const updatedProducts = await getProducts();
+      setProducts(updatedProducts);
+    } catch (e) {
+      setSnackbar({ open: true, message: 'Failed to refresh product stock: ' + e.message });
+      return;
+    }
+
     // Validate aggregated sell quantities against product stock
     const sellTotalsByProduct = {};
     for (const t of transactions) {
