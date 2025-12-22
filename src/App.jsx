@@ -23,20 +23,20 @@ function App() {
           scrollButtons={isMobile ? 'auto' : false}
           allowScrollButtonsMobile
         >
-          <Tab label="Products" />
+          <Tab label="Billing" />
+          <Tab label="Ledger" />
           <Tab label="Transactions" />
+          <Tab label="Products" />
           <Tab label="Stock" />
           <Tab label="Query DB" />
-          <Tab label="Ledger" />
-          <Tab label="Billing" />
         </Tabs>
         <Box sx={{ p: isMobile ? 1 : 3 }}>
-          {tab === 0 && <ProductsPage />}
-          {tab === 1 && <TransactionsPage />}
-          {tab === 2 && <StockPage />}
-          {tab === 3 && <QueryPage />}
-          {tab === 4 && <LedgerPage />}
-          {tab === 5 && <BillingPage />}
+          {tab === 0 && <BillingPage />}
+          {tab === 1 && <LedgerPage />}
+          {tab === 2 && <TransactionsPage />}
+          {tab === 3 && <ProductsPage />}
+          {tab === 4 && <StockPage />}
+          {tab === 5 && <QueryPage />}
         </Box>
       </Box>
     </Container>
