@@ -6,7 +6,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 function BillingPage() {
   const [customer, setCustomer] = useState({ name: '', contact: '' });
   const [transactions, setTransactions] = useState([
-    { productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell' }
+    { productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell', costPrice: '' }
   ]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -26,16 +26,18 @@ function BillingPage() {
   const handleTxnChange = (idx, field, value) => {
     const newTxns = [...transactions];
     newTxns[idx][field] = value;
-    // If product or transactionType changes, update actualPrice and transactionPrice
+    // If product or transactionType changes, update actualPrice, transactionPrice, and costPrice
     if (field === 'productId' || field === 'transactionType') {
       const product = products.find(p => p.id === parseInt(newTxns[idx].productId));
       if (product) {
         const actualPrice = newTxns[idx].transactionType === 'buy' ? product.costPrice : product.sellPrice;
         newTxns[idx].actualPrice = actualPrice;
         newTxns[idx].transactionPrice = actualPrice;
+        newTxns[idx].costPrice = product.costPrice;
       } else {
         newTxns[idx].actualPrice = '';
         newTxns[idx].transactionPrice = '';
+        newTxns[idx].costPrice = '';
       }
     }
     // If quantity or transactionPrice changes, update totalPrice
@@ -46,7 +48,7 @@ function BillingPage() {
   };
 
   const addTxnRow = () => {
-    setTransactions([...transactions, { productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell' }]);
+    setTransactions([...transactions, { productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell', costPrice: '' }]);
   };
 
   const removeTxnRow = (idx) => {
@@ -112,6 +114,9 @@ function BillingPage() {
           transaction_date: new Date().toISOString(),
         });
       }
+      // Clear inputs after successful save
+      setCustomer({ name: '', contact: '' });
+      setTransactions([{ productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell', costPrice: '' }]);
       setBillGenerated(true);
       setBillHtml(generateBillHtml());
       setSnackbar({ open: true, message: 'Bill generated and saved!' });
@@ -257,6 +262,7 @@ function BillingPage() {
               <TableCell>Product</TableCell>
               <TableCell>Quantity</TableCell>
               <TableCell>Actual Price</TableCell>
+              <TableCell>Cost Price</TableCell>
               <TableCell>Txn Price</TableCell>
               <TableCell>Paid</TableCell>
               <TableCell>Total</TableCell>
@@ -287,6 +293,9 @@ function BillingPage() {
                   <TextField name="actualPrice" value={t.actualPrice} size="small" type="number" disabled sx={{ minWidth: 120 }} />
                 </TableCell>
                 <TableCell>
+                  <TextField name="costPrice" value={t.costPrice} size="small" type="number" disabled sx={{ minWidth: 120 }} />
+                </TableCell>
+                <TableCell>
                   <TextField name="transactionPrice" value={t.transactionPrice} onChange={e => handleTxnChange(idx, 'transactionPrice', e.target.value)} size="small" type="number" sx={{ minWidth: 120 }} onFocus={e => {
                     if (!t.transactionPrice && t.productId && t.transactionType) {
                       const product = products.find(p => p.id === parseInt(t.productId));
@@ -315,7 +324,7 @@ function BillingPage() {
               </TableRow>
             ))}
             <TableRow>
-              <TableCell colSpan={9} align="center">
+              <TableCell colSpan={10} align="center">
                 <Button onClick={addTxnRow}>Add Row</Button>
               </TableCell>
             </TableRow>

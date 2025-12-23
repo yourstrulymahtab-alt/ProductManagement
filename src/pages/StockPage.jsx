@@ -28,6 +28,9 @@ function StockPage() {
   // Low Stock
   const lowStock = products.filter(p => p.stock < 10);
 
+  // Out of Stock
+  const outOfStock = products.filter(p => p.stock === 0);
+
   // Most Sold Product by Quantity and Price
   const getMostSold = (days, byPrice = false) => {
     const since = new Date();
@@ -111,6 +114,10 @@ function StockPage() {
           <Paper sx={{ p: 2, mb: 2 }}>
             <Typography variant={isMobile ? 'subtitle1' : 'h6'}>Low Stock Products:</Typography>
             <List dense>{lowStock.length ? lowStock.map(p => <ListItem key={p.id}><ListItemText primary={p.name} /></ListItem>) : <ListItem><ListItemText primary="N/A" /></ListItem>}</List>
+          </Paper>
+          <Paper sx={{ p: 2, mb: 2 }}>
+            <Typography variant={isMobile ? 'subtitle1' : 'h6'}>Out of Stock Products:</Typography>
+            <List dense>{outOfStock.length ? outOfStock.map(p => <ListItem key={p.id}><ListItemText primary={p.name} /></ListItem>) : <ListItem><ListItemText primary="N/A" /></ListItem>}</List>
           </Paper>
         </Grid>
         <Grid item xs={12} sm={6}>
