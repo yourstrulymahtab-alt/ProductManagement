@@ -168,6 +168,7 @@ function LedgerPage() {
                   <TableCell>ID</TableCell>
                   <TableCell>Date</TableCell>
                   <TableCell>Type</TableCell>
+                  <TableCell>Product Name</TableCell>
                   <TableCell>Total Price</TableCell>
                   <TableCell>Amount Paid</TableCell>
                 </TableRow>
@@ -176,8 +177,9 @@ function LedgerPage() {
                 {entry.transactions.map(txn => (
                   <TableRow key={txn.id}>
                     <TableCell>{txn.id}</TableCell>
-                    <TableCell>{txn.transactionDate || txn.transaction_date}</TableCell>
+                    <TableCell>{new Date(txn.transactionDate || txn.transaction_date).toISOString().split('T')[0]}</TableCell>
                     <TableCell>{txn.transactionType || txn.transaction_type}</TableCell>
+                    <TableCell>{txn.productName}</TableCell>
                     <TableCell>{txn.totalPrice ?? txn.total_price ?? ''}</TableCell>
                     <TableCell>{txn.amountPaid ?? txn.amount_paid ?? ''}</TableCell>
                   </TableRow>
