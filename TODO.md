@@ -1,2 +1,11 @@
-- [x] Filter transactions in fetchLedger function to exclude those with reversed=true
-- [x] Filter transactions in handleAdjust function refresh logic to exclude those with reversed=true
+- [x] Add filter UI components above the table
+- [x] Implement filtering logic on transactions array
+- [x] Update table to display filtered transactions
+=======
+- [ ] Fix table to display filteredTransactions instead of transactions
+- [ ] Combine personName and contact into one searchable dropdown with unique combinations
+- [ ] Make productName a searchable dropdown with unique values
+- [ ] Change date to DatePicker calendar
+- [ ] Add Apply Filters button
+- [ ] Update filtering logic to apply on button click
+- [ ] Ignore filters that are not selected

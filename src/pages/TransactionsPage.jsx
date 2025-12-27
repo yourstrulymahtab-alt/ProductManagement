@@ -1,10 +1,12 @@
 // ...existing code...
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { getProducts, getTransactions, addTransaction, clearTransactions, reverseTransaction } from '../api/supabaseApi';
 import { PRODUCT_SALES_TYPE } from '../api/productModel';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Snackbar, IconButton, Grid, useMediaQuery, Select, MenuItem, Autocomplete } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ReplayIcon from '@mui/icons-material/Replay';
 
@@ -24,6 +26,18 @@ function TransactionsPage() {
     contact: '',
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+  const [pendingFilters, setPendingFilters] = useState({
+    personContact: '',
+    date: null,
+    reversed: '',
+    productName: '',
+  });
+  const [appliedFilters, setAppliedFilters] = useState({
+    personContact: '',
+    date: null,
+    reversed: '',
+    productName: '',
+  });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -46,6 +60,37 @@ function TransactionsPage() {
     }
   };
   useEffect(() => { fetchData(); }, []);
+
+  const personContactOptions = useMemo(() => {
+    const unique = new Set();
+    transactions.forEach(t => {
+      const name = t.personName || t.person_name || '';
+      const contact = t.contact || '';
+      if (name || contact) {
+        unique.add(`${name} - ${contact}`);
+      }
+    });
+    return Array.from(unique).sort();
+  }, [transactions]);
+
+  const productNameOptions = useMemo(() => {
+    const unique = new Set();
+    transactions.forEach(t => {
+      if (t.productName) unique.add(t.productName);
+    });
+    return Array.from(unique).sort();
+  }, [transactions]);
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      const personContact = `${t.personName || t.person_name || ''} - ${t.contact || ''}`;
+      const personMatch = !appliedFilters.personContact || personContact.toLowerCase().includes(appliedFilters.personContact.toLowerCase());
+      const dateMatch = !appliedFilters.date || convertToIST(t.transactionDate || t.transaction_date).includes(appliedFilters.date.toLocaleDateString('en-IN'));
+      const reversedMatch = appliedFilters.reversed === '' || (appliedFilters.reversed === 'true' ? t.reversed : !t.reversed);
+      const productMatch = !appliedFilters.productName || (t.productName || '').toLowerCase().includes(appliedFilters.productName.toLowerCase());
+      return personMatch && dateMatch && reversedMatch && productMatch;
+    });
+  }, [transactions, appliedFilters, convertToIST]);
 
   const handleAdd = async () => {
     if (!form.productId || !form.quantity || !form.transactionPrice || !form.amountPaid || !form.transactionType || !form.personName || !form.contact) {
@@ -114,15 +159,77 @@ function TransactionsPage() {
   };
 
   return (
-    <Box sx={{ maxWidth: 1000, mx: 'auto', p: isMobile ? 1 : 3 }}>
-      <Grid container alignItems="center" justifyContent="space-between" spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6}>
-          <Typography variant={isMobile ? 'h6' : 'h5'} gutterBottom>Manage Transactions</Typography>
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Box sx={{ mx: 'auto', p: isMobile ? 1 : 3 }}>
+        <Grid container alignItems="center" justifyContent="space-between" spacing={2} sx={{ mb: 2 }}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant={isMobile ? 'h6' : 'h5'} gutterBottom>Manage Transactions</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} textAlign={isMobile ? 'left' : 'right'}>
+            <Button variant="contained" onClick={() => setOpen(true)} size={isMobile ? 'small' : 'medium'}>Add Transaction</Button>
+          </Grid>
         </Grid>
-        <Grid item xs={12} sm={6} textAlign={isMobile ? 'left' : 'right'}>
-          <Button variant="contained" onClick={() => setOpen(true)} size={isMobile ? 'small' : 'medium'}>Add Transaction</Button>
+        <Grid container spacing={2} sx={{ mb: 2 }} justifyContent="space-between">
+          <Grid item xs={12} sm={12} md={9}>
+            <Autocomplete
+              fullWidth
+              size="small"
+              options={personContactOptions}
+              value={pendingFilters.personContact}
+              onChange={(event, newValue) => setPendingFilters(f => ({ ...f, personContact: newValue || '' }))}
+              renderInput={(params) => <TextField {...params} label="Person - Contact" />}
+              freeSolo
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={0}>
+            <DatePicker
+              label="Date"
+              value={pendingFilters.date}
+              onChange={(newValue) => setPendingFilters(f => ({ ...f, date: newValue }))}
+              renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={0}>
+            <Select
+              fullWidth
+              size="small"
+              value={pendingFilters.reversed}
+              onChange={e => setPendingFilters(f => ({ ...f, reversed: e.target.value }))}
+              displayEmpty
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="true">Reversed</MenuItem>
+              <MenuItem value="false">Not Reversed</MenuItem>
+            </Select>
+          </Grid>
+          <Grid item xs={12} sm={12} md={9}>
+            <Autocomplete
+              fullWidth
+              size="small"
+              options={productNameOptions}
+              value={pendingFilters.productName}
+              onChange={(event, newValue) => setPendingFilters(f => ({ ...f, productName: newValue || '' }))}
+              renderInput={(params) => <TextField {...params} label="Product Name" />}
+              freeSolo
+            />
+          </Grid>
         </Grid>
-      </Grid>
+        <Grid container spacing={2} sx={{ mb: 2 }} justifyContent="center">
+          <Grid item xs={12} sm={6} md={2}>
+            <Button variant="contained" onClick={() => setAppliedFilters(pendingFilters)}>
+              Apply Filters
+            </Button>
+          </Grid>
+          <Grid item xs={12} sm={6} md={2}>
+            <Button variant="outlined" onClick={() => {
+              const cleared = { personContact: '', date: null, reversed: '', productName: '' };
+              setPendingFilters(cleared);
+              setAppliedFilters(cleared);
+            }}>
+              Clear Filters
+            </Button>
+          </Grid>
+        </Grid>
       <TableContainer component={Paper} sx={{ mb: 2 }}>
         <Table size={isMobile ? 'small' : 'medium'}>
           <TableHead>
@@ -142,7 +249,7 @@ function TransactionsPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {transactions.map((t) => (
+            {filteredTransactions.map((t) => (
               <TableRow key={t.id} hover>
                 <TableCell>{t.id}</TableCell>
                 <TableCell>{t.productName}</TableCell>
@@ -264,6 +371,7 @@ function TransactionsPage() {
 
       <Snackbar open={snackbar.open} autoHideDuration={2000} onClose={() => setSnackbar({ open: false, message: '' })} message={snackbar.message} />
     </Box>
+    </LocalizationProvider>
   );
 }
 
