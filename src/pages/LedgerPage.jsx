@@ -15,9 +15,10 @@ function LedgerPage() {
     const fetchLedger = async () => {
       try {
         const txns = await getTransactions();
+        const filteredTxns = txns.filter(t => !t.reversed);
         // Group by person+contact
         const map = {};
-        txns.forEach(t => {
+        filteredTxns.forEach(t => {
           const key = `${t.personName || t.person_name}|${t.contact}`;
           if (!map[key]) map[key] = { person: t.personName || t.person_name, contact: t.contact, totalToTake: 0, totalToGive: 0, transactions: [] };
           const diff = (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);
@@ -69,10 +70,11 @@ function LedgerPage() {
       setAdjustReason('');
       // Refresh ledger
       const updatedTxns = await getTransactions();
+      const filteredUpdatedTxns = updatedTxns.filter(t => !t.reversed);
       const adjustments = await getLedgerAdjustments(person, contact);
       const adjustmentSum = adjustments.reduce((sum, adj) => sum + adj.adjustment_amount, 0);
       const map = {};
-      updatedTxns.forEach(t => {
+      filteredUpdatedTxns.forEach(t => {
         const key = `${t.personName || t.person_name}|${t.contact}`;
         if (!map[key]) map[key] = { person: t.personName || t.person_name, contact: t.contact, totalToTake: 0, totalToGive: 0, transactions: [] };
         const diff = (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);

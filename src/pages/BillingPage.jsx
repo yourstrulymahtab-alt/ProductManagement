@@ -14,6 +14,8 @@ function BillingPage() {
   const [billGenerated, setBillGenerated] = useState(false);
   const [billHtml, setBillHtml] = useState('');
   const [lastBill, setLastBill] = useState({ customer: { name: '', contact: '' }, transactions: [], total: 0 });
+  const [lastPayloadHash, setLastPayloadHash] = useState(null);
+  const [lastSubmissionTime, setLastSubmissionTime] = useState(0);
 
   useEffect(() => {
     getProducts().then(setProducts).catch(e => setSnackbar({ open: true, message: e.message }));
@@ -59,6 +61,17 @@ function BillingPage() {
   const total = transactions.reduce((sum, t) => sum + parseFloat(t.totalPrice || 0), 0);
 
   const handleSaveAndGenerateBill = async () => {
+    // Check for duplicate submission within 2 minutes
+    const currentTime = Date.now();
+    const payload = { customer, transactions };
+    const payloadString = JSON.stringify(payload);
+    const payloadHash = btoa(payloadString); // Simple hash using base64
+
+    if (lastPayloadHash === payloadHash && (currentTime - lastSubmissionTime) < 120000) { // 2 minutes = 120000 ms
+      setSnackbar({ open: true, message: 'Duplicate submission detected. Please wait before submitting again.' });
+      return;
+    }
+
     if (!customer.name.trim() || !customer.contact.trim()) {
       setSnackbar({ open: true, message: 'Customer name and contact cannot be empty.' });
       return;
@@ -117,6 +130,9 @@ function BillingPage() {
       }
       // Store the bill data before clearing inputs
       setLastBill({ customer: customer, transactions: transactions, total: total });
+      // Update duplicate prevention state
+      setLastPayloadHash(payloadHash);
+      setLastSubmissionTime(currentTime);
       // Clear inputs after successful save
       setCustomer({ name: '', contact: '' });
       setTransactions([{ productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell', costPrice: '' }]);
