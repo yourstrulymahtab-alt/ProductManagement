@@ -13,6 +13,7 @@ function BillingPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const [billGenerated, setBillGenerated] = useState(false);
   const [billHtml, setBillHtml] = useState('');
+  const [lastBill, setLastBill] = useState({ customer: { name: '', contact: '' }, transactions: [], total: 0 });
 
   useEffect(() => {
     getProducts().then(setProducts).catch(e => setSnackbar({ open: true, message: e.message }));
@@ -114,18 +115,20 @@ function BillingPage() {
           transaction_date: new Date().toISOString(),
         });
       }
+      // Store the bill data before clearing inputs
+      setLastBill({ customer: customer, transactions: transactions, total: total });
       // Clear inputs after successful save
       setCustomer({ name: '', contact: '' });
       setTransactions([{ productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell', costPrice: '' }]);
       setBillGenerated(true);
-      setBillHtml(generateBillHtml());
+      setBillHtml(generateBillHtml(customer, transactions, total));
       setSnackbar({ open: true, message: 'Bill generated and saved!' });
     } catch (e) {
       setSnackbar({ open: true, message: e.message });
     }
   };
 
-  const generateBillHtml = () => {
+  const generateBillHtml = (customer, transactions, total) => {
     let rows = transactions.map((t, i) => {
       const prod = products.find(p => p.id == t.productId);
       return `<tr><td>${i + 1}</td><td>${prod ? prod.name : ''}</td><td>${t.quantity}</td><td>${t.actualPrice}</td><td>${t.transactionPrice}</td><td>${t.amountPaid}</td><td>${t.totalPrice}</td><td>${t.transactionType}</td></tr>`;
@@ -168,18 +171,18 @@ function BillingPage() {
         <div class='watermark'>JHARKHAND STEEL</div>
         <div class='bill-content'>
           <h2>Bill</h2>
-          <div class='bill-header'><b>Name:</b> ${customer.name} &nbsp;&nbsp; <b>Contact:</b> ${customer.contact}</div>
+          <div class='bill-header'><b>Name:</b> ${lastBill.customer.name} &nbsp;&nbsp; <b>Contact:</b> ${lastBill.customer.contact}</div>
           <div class='bill-header'><b>Date:</b> ${new Date().toLocaleString()}</div>
           <table>
             <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Actual Price</th><th>Txn Price</th><th>Paid</th><th>Total</th><th>Type</th></tr></thead>
             <tbody>
-              ${transactions.map((t, i) => {
+              ${lastBill.transactions.map((t, i) => {
                 const prod = products.find(p => p.id == t.productId);
                 return `<tr><td>${i + 1}</td><td>${prod ? prod.name : ''}</td><td>${t.quantity}</td><td>${t.actualPrice}</td><td>${t.transactionPrice}</td><td>${t.amountPaid}</td><td>${t.totalPrice}</td><td>${t.transactionType}</td></tr>`;
               }).join('')}
             </tbody>
           </table>
-          <div class='bill-footer'>Total: ${total.toFixed(2)}</div>
+          <div class='bill-footer'>Total: ${lastBill.total.toFixed(2)}</div>
         </div>
       </div>
     </body></html>`;
@@ -187,7 +190,7 @@ function BillingPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `bill_${customer.name}_${Date.now()}.html`;
+    a.download = `bill_${lastBill.customer.name}_${Date.now()}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };

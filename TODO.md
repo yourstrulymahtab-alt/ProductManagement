@@ -1,3 +1,7 @@
-- [x] Add "Product Name" column header in TableHead after "Type"
-- [x] Add TableCell for {txn.productName} in TableBody after "Type" cell
-- [x] Format Date TableCell to "YYYY-MM-DD" using new Date(txn.transactionDate || txn.transaction_date).toISOString().split('T')[0]
+# TODO: Fix Billing Page Download Issue
+
+- [x] Add `lastBill` state to store the last generated bill's data (customer, transactions, total).
+- [x] In `handleSaveAndGenerateBill`, set `lastBill` before clearing inputs.
+- [x] Update `generateBillHtml` to use `lastBill` instead of current state.
+- [x] Update `handleDownloadHTML` to use `lastBill` for generating the HTML.
+- [x] Ensure bill preview uses the updated `billHtml`.
