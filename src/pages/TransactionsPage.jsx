@@ -27,6 +27,15 @@ function TransactionsPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // Helper function to convert UTC timestamp to IST
+  const convertToIST = (utcDateString) => {
+    if (!utcDateString) return '';
+    const utcDate = new Date(utcDateString);
+    const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+    const istDate = new Date(utcDate.getTime() + istOffset);
+    return istDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  };
+
   const fetchData = async () => {
     try {
       const txns = await getTransactions();
@@ -143,7 +152,7 @@ function TransactionsPage() {
                 <TableCell>{t.totalPrice ?? t.total_price ?? ''}</TableCell>
                 <TableCell>{t.amountPaid ?? t.amount_paid ?? ''}</TableCell>
                 <TableCell>{t.transactionType || t.transaction_type}{t.reversed ? ' (reversed)' : ''}</TableCell>
-                <TableCell>{t.transactionDate || t.transaction_date}</TableCell>
+                <TableCell>{convertToIST(t.transactionDate || t.transaction_date)}</TableCell>
                 <TableCell>{t.personName || t.person_name}</TableCell>
                 <TableCell>{t.contact}</TableCell>
                 <TableCell>
