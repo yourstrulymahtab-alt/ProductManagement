@@ -11,42 +11,43 @@ function LedgerPage() {
   const [expandedPersons, setExpandedPersons] = useState({});
   const [personAdjustmentHistory, setPersonAdjustmentHistory] = useState({});
 
-  useEffect(() => {
-    const fetchLedger = async () => {
-      try {
-        const txns = await getTransactions();
-        const filteredTxns = txns.filter(t => !t.reversed);
-        // Group by person+contact
-        const map = {};
-        filteredTxns.forEach(t => {
-          const key = `${t.personName || t.person_name}|${t.contact}`;
-          if (!map[key]) map[key] = { person: t.personName || t.person_name, contact: t.contact, totalToTake: 0, totalToGive: 0, transactions: [] };
-          const diff = (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);
-          if (diff < 0) map[key].totalToTake += Math.abs(diff);
-          else if (diff > 0) map[key].totalToGive += diff;
-          map[key].transactions.push(t);
-        });
-        // Apply adjustments to totals (optional, if table exists)
-        for (const key in map) {
-          const [person, contact] = key.split('|');
-          try {
-            const adjustments = await getLedgerAdjustments(person, contact);
-            const adjustmentSum = adjustments.reduce((sum, adj) => sum + adj.adjustment_amount, 0);
-            const net = map[key].totalToTake - map[key].totalToGive - adjustmentSum;
-            map[key].totalToTake = Math.max(net, 0);
-            map[key].totalToGive = Math.max(-net, 0);
-          } catch (e) {
-            // Ignore if ledger_adjustments table doesn't exist yet
-            console.warn('Ledger adjustments not available:', e.message);
-          }
+  const fetchLedger = async () => {
+    try {
+      const txns = await getTransactions();
+      const filteredTxns = txns.filter(t => !t.reversed);
+      // Group by person+contact
+      const map = {};
+      filteredTxns.forEach(t => {
+        const key = `${t.personName || t.person_name}|${t.contact}`;
+        if (!map[key]) map[key] = { person: t.personName || t.person_name, contact: t.contact, totalToTake: 0, totalToGive: 0, transactions: [] };
+        const diff = (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);
+        if (diff < 0) map[key].totalToTake += Math.abs(diff);
+        else if (diff > 0) map[key].totalToGive += diff;
+        map[key].transactions.push(t);
+      });
+      // Apply adjustments to totals
+      for (const key in map) {
+        const [person, contact] = key.split('|');
+        try {
+          const adjustments = await getLedgerAdjustments(person, contact);
+          const adjustmentSum = adjustments.reduce((sum, adj) => sum + adj.adjustment_amount, 0);
+          const net = map[key].totalToTake - map[key].totalToGive - adjustmentSum;
+          map[key].totalToTake = Math.max(net, 0);
+          map[key].totalToGive = Math.max(-net, 0);
+        } catch (e) {
+          // Ignore if ledger_adjustments table doesn't exist yet
+          console.warn('Ledger adjustments not available:', e.message);
         }
-        const ledgerEntries = Object.values(map).filter(entry => entry.totalToTake >= 10 || entry.totalToGive >= 10);
-        ledgerEntries.sort((a, b) => Math.max(b.totalToTake, b.totalToGive) - Math.max(a.totalToTake, a.totalToGive));
-        setLedger(ledgerEntries);
-      } catch (e) {
-        setSnackbar({ open: true, message: e.message });
       }
-    };
+      const ledgerEntries = Object.values(map).filter(entry => entry.totalToTake >= 10 || entry.totalToGive >= 10);
+      ledgerEntries.sort((a, b) => Math.max(b.totalToTake, b.totalToGive) - Math.max(a.totalToTake, a.totalToGive));
+      setLedger(ledgerEntries);
+    } catch (e) {
+      setSnackbar({ open: true, message: e.message });
+    }
+  };
+
+  useEffect(() => {
     fetchLedger();
   }, []);
 
@@ -68,30 +69,8 @@ function LedgerPage() {
       setSnackbar({ open: true, message: 'Adjustment recorded.' });
       setAdjustAmount('');
       setAdjustReason('');
-      // Refresh ledger
-      const updatedTxns = await getTransactions();
-      const filteredUpdatedTxns = updatedTxns.filter(t => !t.reversed);
-      const adjustments = await getLedgerAdjustments(person, contact);
-      const adjustmentSum = adjustments.reduce((sum, adj) => sum + adj.adjustment_amount, 0);
-      const map = {};
-      filteredUpdatedTxns.forEach(t => {
-        const key = `${t.personName || t.person_name}|${t.contact}`;
-        if (!map[key]) map[key] = { person: t.personName || t.person_name, contact: t.contact, totalToTake: 0, totalToGive: 0, transactions: [] };
-        const diff = (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);
-        if (diff < 0) map[key].totalToTake += Math.abs(diff);
-        else if (diff > 0) map[key].totalToGive += diff;
-        map[key].transactions.push(t);
-      });
-      // Apply adjustments to totals
-      const key = `${person}|${contact}`;
-      if (map[key]) {
-        const net = map[key].totalToTake - map[key].totalToGive - adjustmentSum;
-        map[key].totalToTake = Math.max(net, 0);
-        map[key].totalToGive = Math.max(-net, 0);
-      }
-      const ledgerEntries = Object.values(map).filter(entry => entry.totalToTake >= 10 || entry.totalToGive >= 10);
-      ledgerEntries.sort((a, b) => Math.max(b.totalToTake, b.totalToGive) - Math.max(a.totalToTake, a.totalToGive));
-      setLedger(ledgerEntries);
+      // Refresh entire ledger to ensure latest data
+      await fetchLedger();
     } catch (e) {
       setSnackbar({ open: true, message: e.message });
     }
@@ -113,7 +92,14 @@ function LedgerPage() {
 
   return (
     <Box sx={{ maxWidth: 1000, mx: 'auto', p: 2 }}>
-      <Typography variant="h5" gutterBottom>Ledger Accounts</Typography>
+      <Grid container alignItems="center" justifyContent="space-between" spacing={2} sx={{ mb: 2 }}>
+        <Grid item>
+          <Typography variant="h5">Ledger Accounts</Typography>
+        </Grid>
+        <Grid item>
+          <Button variant="outlined" onClick={fetchLedger}>Refresh Ledger</Button>
+        </Grid>
+      </Grid>
       {ledger.map((entry, idx) => (
         <Box key={idx} sx={{ mb: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
           <Typography variant="h6" sx={{ color: 'blue' }}>{entry.person} ({entry.contact})</Typography>
