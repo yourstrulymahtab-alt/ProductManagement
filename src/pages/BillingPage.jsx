@@ -206,7 +206,12 @@ function BillingPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `bill_${lastBill.customer.name}_${Date.now()}.html`;
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    const formattedDate = `${dd}_${mm}_${yyyy}`;
+    a.download = `bill_${lastBill.customer.name}_${formattedDate}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };
