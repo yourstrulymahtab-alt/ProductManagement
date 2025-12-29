@@ -137,7 +137,7 @@ function LedgerPage() {
                   <TableBody>
                     {personAdjustmentHistory[`${entry.person}|${entry.contact}`].map(adj => (
                       <TableRow key={adj.id}>
-                        <TableCell>{new Date(adj.adjustment_date).toLocaleString()}</TableCell>
+                        <TableCell>{new Date(adj.adjustment_date).getDate()+"/"+(new Date(adj.adjustment_date).getMonth()+1)+"/"+new Date(adj.adjustment_date).getFullYear()}</TableCell>
                         <TableCell>{adj.adjustment_amount}</TableCell>
                         <TableCell>{adj.reason}</TableCell>
                       </TableRow>

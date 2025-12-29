@@ -294,6 +294,7 @@ function BillingPage() {
               <TableRow key={idx}>
                 <TableCell>{idx + 1}</TableCell>
                 <TableCell>
+                  <div style={{ width: '300px' }}>
                   <Autocomplete
                     options={products}
                     getOptionLabel={option => option.name || ''}
@@ -304,6 +305,7 @@ function BillingPage() {
                     renderInput={params => <TextField {...params} label="Select Product" fullWidth size="small" sx={{ minWidth: 180 }} />}
                     disabled={products.length === 0}
                   />
+                  </div>
                 </TableCell>
                 <TableCell>
                   <TextField name="quantity" value={t.quantity} onChange={e => handleTxnChange(idx, 'quantity', e.target.value)} size="small" type="number" sx={{ minWidth: 100 }} />

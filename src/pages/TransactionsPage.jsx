@@ -171,6 +171,7 @@ function TransactionsPage() {
         </Grid>
         <Grid container spacing={2} sx={{ mb: 2 }} justifyContent="space-between">
           <Grid item xs={12} sm={12} md={9}>
+            <div style={{ width: '250px' }}>
             <Autocomplete
               fullWidth
               size="small"
@@ -180,6 +181,7 @@ function TransactionsPage() {
               renderInput={(params) => <TextField {...params} label="Person - Contact" />}
               freeSolo
             />
+            </div>
           </Grid>
           <Grid item xs={12} sm={6} md={0}>
             <DatePicker
@@ -190,6 +192,7 @@ function TransactionsPage() {
             />
           </Grid>
           <Grid item xs={12} sm={6} md={0}>
+            <div style={{ width: '100px' }}>
             <Select
               fullWidth
               size="small"
@@ -201,8 +204,10 @@ function TransactionsPage() {
               <MenuItem value="true">Reversed</MenuItem>
               <MenuItem value="false">Not Reversed</MenuItem>
             </Select>
+            </div>
           </Grid>
           <Grid item xs={12} sm={12} md={9}>
+            <div style={{ width: '250px' }}>
             <Autocomplete
               fullWidth
               size="small"
@@ -212,6 +217,7 @@ function TransactionsPage() {
               renderInput={(params) => <TextField {...params} label="Product Name" />}
               freeSolo
             />
+            </div>
           </Grid>
         </Grid>
         <Grid container spacing={2} sx={{ mb: 2 }} justifyContent="center">
