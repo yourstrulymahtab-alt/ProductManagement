@@ -16,7 +16,7 @@ function App() {
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="static" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
         <Toolbar sx={{ px: isMobile ? 2 : 3 }}>
-          <img src="/public/JharkhandSteel.svg" alt="Logo" style={{ height: '40px', marginRight: '16px' }} />
+          <img src="/JharkhandSteel.svg" alt="Jharkhand Steel Logo" style={{ height: '40px', marginRight: '16px' }} />
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             JHARKHAND STEEL
           </Typography>
