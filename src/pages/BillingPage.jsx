@@ -392,8 +392,8 @@ function BillingPage() {
       </TableContainer>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, mt: 2 }}>
         <Typography variant="h6">Total: {total.toFixed(2)}</Typography>
-        <TextField label="Payment Amount" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} type="number" fullWidth />
-        <TextField label="Discount Amount" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} type="number" fullWidth />
+        <TextField label="Payment Amount" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} type="number" sx={{ width: '250px' }} />
+        <TextField label="Discount Amount" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} type="number" sx={{ width: '250px' }} />
         <Typography variant="h6">Due: {adjustedTotal.toFixed(2)}</Typography>
       </Box>
       <Button variant="contained" color="primary" sx={{ mt: 2 }} onClick={handleSaveAndGenerateBill}>Save & Generate Bill</Button>
