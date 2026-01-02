@@ -265,6 +265,7 @@ function BillingPage() {
       <Typography variant="h5" gutterBottom>Billing</Typography>
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6}>
+          <div style={{ width: '300px' }}>
           <Autocomplete
             freeSolo
             options={customers.map(c => c.person_name).filter(Boolean)}
@@ -284,13 +285,13 @@ function BillingPage() {
               });
             }}
             renderInput={params => (
-              <TextField {...params} label="Customer Name" fullWidth margin="normal" required
-                sx={{ minWidth: 420, maxWidth: 600 }}
-              />
+              <TextField {...params} label="Customer Name" fullWidth margin="normal" required />
             )}
           />
+          </div>
         </Grid>
         <Grid item xs={12} sm={6}>
+          <div style={{ width: '300px' }}>
           <Autocomplete
             freeSolo
             options={customers.map(c => c.contact).filter(Boolean)}
@@ -304,15 +305,14 @@ function BillingPage() {
               setCustomer(c => ({ ...c, contact: newInputValue }));
             }}
             renderInput={params => (
-              <TextField {...params} label="Contact" fullWidth margin="normal" required
-                sx={{ minWidth: 420, maxWidth: 600 }}
-              />
+              <TextField {...params} label="Contact" fullWidth margin="normal" required />
             )}
           />
+          </div>
         </Grid>
       </Grid>
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
-        <Table size="small">
+      <TableContainer component={Paper} sx={{ mt: 2, overflowX: 'auto' }}>
+        <Table size="small" sx={{ minWidth: 800 }}>
           <TableHead>
             <TableRow>
               <TableCell>#</TableCell>
@@ -390,10 +390,10 @@ function BillingPage() {
           </TableBody>
         </Table>
       </TableContainer>
-      <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-        <Typography variant="h6" sx={{ mr: '20px' }}>Total: {total.toFixed(2)}</Typography>
-        <TextField label="Payment Amount" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} type="number" sx={{ minWidth: 200, mr: '20px' }} />
-        <TextField label="Discount Amount" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} type="number" sx={{ minWidth: 200, mr: '20px' }} />
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, mt: 2 }}>
+        <Typography variant="h6">Total: {total.toFixed(2)}</Typography>
+        <TextField label="Payment Amount" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} type="number" fullWidth />
+        <TextField label="Discount Amount" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} type="number" fullWidth />
         <Typography variant="h6">Due: {adjustedTotal.toFixed(2)}</Typography>
       </Box>
       <Button variant="contained" color="primary" sx={{ mt: 2 }} onClick={handleSaveAndGenerateBill}>Save & Generate Bill</Button>
@@ -406,7 +406,10 @@ function BillingPage() {
             variant="outlined"
             startIcon={<WhatsAppIcon />}
             sx={{ mt: 1 }}
-            onClick={() => window.open(`https://wa.me/${lastBill.customer.contact}`, '_blank')}
+            onClick={() => {
+              const message = `Your total bill at Jharkhand Steel on ${new Date().toLocaleDateString()} is ₹${lastBill.total.toFixed(2)}. Bill is attached.`;
+              window.open(`https://wa.me/${lastBill.customer.contact}?text=${encodeURIComponent(message)}`, '_blank');
+            }}
             disabled={!lastBill.customer.contact}
           >
             WhatsApp

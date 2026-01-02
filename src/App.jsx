@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs, Tab, Box, Container, useMediaQuery } from '@mui/material';
+import { Tabs, Tab, Box, Container, useMediaQuery, AppBar, Toolbar, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ProductsPage from './pages/ProductsPage';
 import TransactionsPage from './pages/TransactionsPage';
@@ -13,8 +13,16 @@ function App() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   return (
-    <Container maxWidth="md" disableGutters={isMobile}>
-      <Box sx={{ width: '100%', bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, mt: isMobile ? 0 : 4 }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <AppBar position="static" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
+        <Toolbar sx={{ px: isMobile ? 2 : 3 }}>
+          <img src="/src/assets/react.svg" alt="Logo" style={{ height: '40px', marginRight: '16px' }} />
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            JHARKHAND STEEL
+          </Typography>
+        </Toolbar>
+      </AppBar>
+      <Box sx={{ width: '100%', bgcolor: 'background.paper', minHeight: 'calc(100vh - 64px)', p: isMobile ? 1 : 3 }}>
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
@@ -22,6 +30,7 @@ function App() {
           variant={isMobile ? 'scrollable' : 'standard'}
           scrollButtons={isMobile ? 'auto' : false}
           allowScrollButtonsMobile
+          sx={{ mb: 2 }}
         >
           <Tab label="Billing" />
           <Tab label="Ledger" />
@@ -39,7 +48,7 @@ function App() {
           {tab === 5 && <QueryPage />}
         </Box>
       </Box>
-    </Container>
+    </Box>
   );
 }
 

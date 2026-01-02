@@ -3,9 +3,9 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: #213547;
-  background-color: #FFE5B4; /* Light orange */
+  color-scheme: dark;
+  color: #ffffff;
+  background-color: #000000; /* Black background */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,27 +13,31 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
 a {
   font-weight: 500;
-  color: #646cff;
+  color: #61dafb;
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: #21b4d6;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #FFE5B4; /* Light orange */
+  background-color: #000000; /* Black background */
 }
 
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+  color: #ffffff;
 }
 
 button {
@@ -43,16 +47,18 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #343a40; /* Bootstrap dark button */
+  color: #ffffff;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: background-color 0.25s, border-color 0.25s;
 }
 button:hover {
-  border-color: #646cff;
+  background-color: #495057; /* Darker on hover */
+  border-color: #61dafb;
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-/* Remove color scheme overrides to enforce light orange background */
+/* Bootstrap-like dark theme overrides */
