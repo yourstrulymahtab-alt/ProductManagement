@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getProducts, addTransaction, getUniqueCustomers } from '../api/supabaseApi';
+import { getProducts, addTransaction, getUniqueCustomers, addLedgerAdjustment } from '../api/supabaseApi';
 import { Box, Button, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Grid, Snackbar, Select, MenuItem, Autocomplete } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
 function BillingPage() {
   const [customer, setCustomer] = useState({ name: '', contact: '' });
@@ -13,9 +14,11 @@ function BillingPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const [billGenerated, setBillGenerated] = useState(false);
   const [billHtml, setBillHtml] = useState('');
-  const [lastBill, setLastBill] = useState({ customer: { name: '', contact: '' }, transactions: [], total: 0 });
+  const [lastBill, setLastBill] = useState({ customer: { name: '', contact: '' }, transactions: [], total: 0, paidAmount: 0 });
   const [lastPayloadHash, setLastPayloadHash] = useState(null);
   const [lastSubmissionTime, setLastSubmissionTime] = useState(0);
+  const [paymentAmount, setPaymentAmount] = useState('0');
+  const [discountAmount, setDiscountAmount] = useState('0');
 
   useEffect(() => {
     getProducts().then(setProducts).catch(e => setSnackbar({ open: true, message: e.message }));
@@ -59,6 +62,7 @@ function BillingPage() {
   };
 
   const total = transactions.reduce((sum, t) => sum + parseFloat(t.totalPrice || 0), 0);
+  const adjustedTotal = total - parseFloat(paymentAmount || 0) - parseFloat(discountAmount || 0);
 
   const handleSaveAndGenerateBill = async () => {
     // Check for duplicate submission within 2 minutes
@@ -128,26 +132,49 @@ function BillingPage() {
           transaction_date: new Date().toISOString(),
         });
       }
+      // Add ledger adjustment if payment amount is provided
+      if (parseFloat(paymentAmount) > 0) {
+        await addLedgerAdjustment({
+          person_name: customer.name,
+          contact: customer.contact,
+          adjustment_amount: parseFloat(paymentAmount),
+          adjustment_date: new Date().toISOString(),
+          reason: 'Paid while billing',
+        });
+      }
+      // Add ledger adjustment if discount amount is provided
+      if (parseFloat(discountAmount) > 0) {
+        await addLedgerAdjustment({
+          person_name: customer.name,
+          contact: customer.contact,
+          adjustment_amount: parseFloat(discountAmount),
+          adjustment_date: new Date().toISOString(),
+          reason: 'Discount',
+        });
+      }
       // Store the bill data before clearing inputs
-      setLastBill({ customer: customer, transactions: transactions, total: total });
+      setLastBill({ customer: customer, transactions: transactions, total: adjustedTotal, paidAmount: parseFloat(paymentAmount) || 0, discountAmount: parseFloat(discountAmount) || 0 });
       // Update duplicate prevention state
       setLastPayloadHash(payloadHash);
       setLastSubmissionTime(currentTime);
       // Clear inputs after successful save
       setCustomer({ name: '', contact: '' });
       setTransactions([{ productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell', costPrice: '' }]);
+      setPaymentAmount('');
+      setDiscountAmount('');
       setBillGenerated(true);
-      setBillHtml(generateBillHtml(customer, transactions, total));
+      setBillHtml(generateBillHtml(customer, transactions, total, parseFloat(paymentAmount) || 0, parseFloat(discountAmount) || 0));
       setSnackbar({ open: true, message: 'Bill generated and saved!' });
     } catch (e) {
       setSnackbar({ open: true, message: e.message });
     }
   };
 
-  const generateBillHtml = (customer, transactions, total) => {
+  const generateBillHtml = (customer, transactions, total, paidAmount = 0, discountAmount = 0) => {
+    const adjustedTotal = total - paidAmount - discountAmount;
     let rows = transactions.map((t, i) => {
       const prod = products.find(p => p.id == t.productId);
-      return `<tr><td>${i + 1}</td><td>${prod ? prod.name : ''}</td><td>${t.quantity}</td><td>${t.actualPrice}</td><td>${t.transactionPrice}</td><td>${t.amountPaid}</td><td>${t.totalPrice}</td><td>${t.transactionType}</td></tr>`;
+      return `<tr><td>${i + 1}</td><td>${prod ? prod.name : ''}</td><td>${t.quantity}</td><td>${t.transactionPrice}</td><td>${t.totalPrice}</td><td>${t.transactionType}</td></tr>`;
     }).join('');
     return `
       <div style="position:relative; min-height:800px;">
@@ -158,10 +185,13 @@ function BillingPage() {
           <h2>Bill</h2>
           <p><b>Name:</b> ${customer.name} <b>Contact:</b> ${customer.contact}</p>
           <table border="1" cellpadding="5" cellspacing="0">
-            <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Actual Price</th><th>Txn Price</th><th>Paid</th><th>Total</th><th>Type</th></tr></thead>
+            <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Type</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
-          <h3>Total: ${total.toFixed(2)}</h3>
+          <br>
+          <p><b>Payment Amount:</b> ${paidAmount.toFixed(2)}</p>
+          ${discountAmount > 0 ? `<p><b>Discount:</b> ${discountAmount.toFixed(2)}</p>` : ''}
+          <p><b>Due:</b> ${adjustedTotal.toFixed(2)}</p>
           <p>Date: ${new Date().toLocaleString()}</p>
         </div>
       </div>
@@ -190,15 +220,18 @@ function BillingPage() {
           <div class='bill-header'><b>Name:</b> ${lastBill.customer.name} &nbsp;&nbsp; <b>Contact:</b> ${lastBill.customer.contact}</div>
           <div class='bill-header'><b>Date:</b> ${new Date().toLocaleString()}</div>
           <table>
-            <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Actual Price</th><th>Txn Price</th><th>Paid</th><th>Total</th><th>Type</th></tr></thead>
+            <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Type</th></tr></thead>
             <tbody>
               ${lastBill.transactions.map((t, i) => {
                 const prod = products.find(p => p.id == t.productId);
-                return `<tr><td>${i + 1}</td><td>${prod ? prod.name : ''}</td><td>${t.quantity}</td><td>${t.actualPrice}</td><td>${t.transactionPrice}</td><td>${t.amountPaid}</td><td>${t.totalPrice}</td><td>${t.transactionType}</td></tr>`;
+                return `<tr><td>${i + 1}</td><td>${prod ? prod.name : ''}</td><td>${t.quantity}</td><td>${t.transactionPrice}</td><td>${t.totalPrice}</td><td>${t.transactionType}</td></tr>`;
               }).join('')}
             </tbody>
           </table>
-          <div class='bill-footer'>Total: ${lastBill.total.toFixed(2)}</div>
+          <br>
+          <div class='bill-header'><b>Payment Amount:</b> ${lastBill.paidAmount.toFixed(2)}</div>
+          ${lastBill.discountAmount > 0 ? `<div class='bill-header'><b>Discount:</b> ${lastBill.discountAmount.toFixed(2)}</div>` : ''}
+          <div class='bill-footer'>Due: ${lastBill.total.toFixed(2)}</div>
         </div>
       </div>
     </body></html>`;
@@ -357,13 +390,27 @@ function BillingPage() {
           </TableBody>
         </Table>
       </TableContainer>
-      <Typography variant="h6" sx={{ mt: 2 }}>Total: {total.toFixed(2)}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+        <Typography variant="h6" sx={{ mr: '20px' }}>Total: {total.toFixed(2)}</Typography>
+        <TextField label="Payment Amount" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} type="number" sx={{ minWidth: 200, mr: '20px' }} />
+        <TextField label="Discount Amount" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} type="number" sx={{ minWidth: 200, mr: '20px' }} />
+        <Typography variant="h6">Due: {adjustedTotal.toFixed(2)}</Typography>
+      </Box>
       <Button variant="contained" color="primary" sx={{ mt: 2 }} onClick={handleSaveAndGenerateBill}>Save & Generate Bill</Button>
       {billGenerated && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="h6">Bill Preview</Typography>
           <div dangerouslySetInnerHTML={{ __html: billHtml }} />
           <Button variant="outlined" sx={{ mt: 1, mr: 2 }} onClick={handleDownloadHTML}>Download Bill</Button>
+          <Button
+            variant="outlined"
+            startIcon={<WhatsAppIcon />}
+            sx={{ mt: 1 }}
+            onClick={() => window.open(`https://wa.me/${lastBill.customer.contact}`, '_blank')}
+            disabled={!lastBill.customer.contact}
+          >
+            WhatsApp
+          </Button>
         </Box>
       )}
       <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} message={snackbar.message} />
