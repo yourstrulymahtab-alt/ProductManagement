@@ -14,7 +14,7 @@ function BillingPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const [billGenerated, setBillGenerated] = useState(false);
   const [billHtml, setBillHtml] = useState('');
-  const [lastBill, setLastBill] = useState({ customer: { name: '', contact: '' }, transactions: [], total: 0, paidAmount: 0 });
+  const [lastBill, setLastBill] = useState({ customer: { name: '', contact: '' }, transactions: [], total: 0, grossTotal: 0, paidAmount: 0 });
   const [lastPayloadHash, setLastPayloadHash] = useState(null);
   const [lastSubmissionTime, setLastSubmissionTime] = useState(0);
   const [paymentAmount, setPaymentAmount] = useState('0');
@@ -153,7 +153,7 @@ function BillingPage() {
         });
       }
       // Store the bill data before clearing inputs
-      setLastBill({ customer: customer, transactions: transactions, total: adjustedTotal, paidAmount: parseFloat(paymentAmount) || 0, discountAmount: parseFloat(discountAmount) || 0 });
+      setLastBill({ customer: customer, transactions: transactions, total: adjustedTotal, grossTotal: total, paidAmount: parseFloat(paymentAmount) || 0, discountAmount: parseFloat(discountAmount) || 0 });
       // Update duplicate prevention state
       setLastPayloadHash(payloadHash);
       setLastSubmissionTime(currentTime);
@@ -407,7 +407,7 @@ function BillingPage() {
             startIcon={<WhatsAppIcon />}
             sx={{ mt: 1 }}
             onClick={() => {
-              const message = `Your total bill at Jharkhand Steel on ${new Date().toLocaleDateString()} is ₹${lastBill.total.toFixed(2)}. Bill is attached.`;
+              const message = `Your total bill at Jharkhand Steel on ${new Date().toLocaleDateString()} is ₹${lastBill.grossTotal.toFixed(2)}. Due amount is ₹${lastBill.total.toFixed(2)}.${lastBill.total === 0 ? ' Fully paid.' : ''} Bill is attached.`;
               window.open(`https://wa.me/${lastBill.customer.contact}?text=${encodeURIComponent(message)}`, '_blank');
             }}
             disabled={!lastBill.customer.contact}
