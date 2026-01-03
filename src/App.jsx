@@ -3,7 +3,7 @@ import { Tabs, Tab, Box, Container, useMediaQuery, AppBar, Toolbar, Typography }
 import { useTheme } from '@mui/material/styles';
 import ProductsPage from './pages/ProductsPage';
 import TransactionsPage from './pages/TransactionsPage';
-import StockPage from './pages/StockPage';
+import InsightsPage from './pages/InsightsPage';
 import QueryPage from './pages/QueryPage';
 import LedgerPage from './pages/LedgerPage';
 import BillingPage from './pages/BillingPage';
@@ -36,7 +36,7 @@ function App() {
           <Tab label="Ledger" />
           <Tab label="Transactions" />
           <Tab label="Products" />
-          <Tab label="Stock" />
+          <Tab label="Insights" />
           <Tab label="Query DB" />
         </Tabs>
         <Box sx={{ p: isMobile ? 1 : 3 }}>
@@ -44,7 +44,7 @@ function App() {
           {tab === 1 && <LedgerPage />}
           {tab === 2 && <TransactionsPage />}
           {tab === 3 && <ProductsPage />}
-          {tab === 4 && <StockPage />}
+          {tab === 4 && <InsightsPage />}
           {tab === 5 && <QueryPage />}
         </Box>
       </Box>

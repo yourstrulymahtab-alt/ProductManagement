@@ -28,7 +28,7 @@ ChartJS.register(
   Legend
 );
 
-function StockPage() {
+function InsightsPage() {
   const [products, setProducts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [startDate, setStartDate] = useState('');
@@ -370,4 +370,4 @@ function StockPage() {
   );
 }
 
-export default StockPage;
+export default InsightsPage;
