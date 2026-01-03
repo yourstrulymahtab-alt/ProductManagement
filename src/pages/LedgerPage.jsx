@@ -126,24 +126,26 @@ function LedgerPage() {
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Adjustment History</Typography>
               {personAdjustmentHistory[`${entry.person}|${entry.contact}`] && personAdjustmentHistory[`${entry.person}|${entry.contact}`].length > 0 ? (
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Adjustment Amount</TableCell>
-                      <TableCell>Reason</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {personAdjustmentHistory[`${entry.person}|${entry.contact}`].map(adj => (
-                      <TableRow key={adj.id}>
-                        <TableCell>{new Date(adj.adjustment_date).getDate()+"/"+(new Date(adj.adjustment_date).getMonth()+1)+"/"+new Date(adj.adjustment_date).getFullYear()}</TableCell>
-                        <TableCell>{adj.adjustment_amount}</TableCell>
-                        <TableCell>{adj.reason}</TableCell>
+                <TableContainer component={Paper} sx={{ maxHeight: 300, overflowY: 'auto' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Adjustment Amount</TableCell>
+                        <TableCell>Reason</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHead>
+                    <TableBody>
+                      {personAdjustmentHistory[`${entry.person}|${entry.contact}`].map(adj => (
+                        <TableRow key={adj.id}>
+                          <TableCell>{new Date(adj.adjustment_date).getDate()+"/"+(new Date(adj.adjustment_date).getMonth()+1)+"/"+new Date(adj.adjustment_date).getFullYear()}</TableCell>
+                          <TableCell>{adj.adjustment_amount}</TableCell>
+                          <TableCell>{adj.reason}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               ) : (
                 <Typography variant="body2" color="textSecondary">No adjustments recorded.</Typography>
               )}
