@@ -51,10 +51,10 @@ export const addTransaction = async (txn) => {
 
     // If amountPaid changed, record adjustment
     if (updateFields.amountPaid !== undefined && updateFields.amountPaid !== currentTxn.amount_paid) {
-      await addAmountAdjustment({
-        transaction_id: id,
-        old_amount: currentTxn.amount_paid,
-        new_amount: updateFields.amountPaid,
+      await addLedgerAdjustment({
+        person_name: currentTxn.person_name,
+        contact: currentTxn.contact,
+        adjustment_amount: updateFields.amountPaid - currentTxn.amount_paid,
         adjustment_date: new Date().toISOString(),
         reason: 'Manual adjustment'
       });

@@ -30,7 +30,10 @@ function ProductsPage() {
       setSnackbar({ open: true, message: e.message });
     }
   };
-  useEffect(() => { fetchProducts(); }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   const handleAddOrEdit = async () => {
     if (!form.name || !form.costPrice || !form.sellPrice || !form.stock) {

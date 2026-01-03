@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { getTransactions, addTransaction, getLedgerAdjustments, addLedgerAdjustment } from '../api/supabaseApi';
+import { getTransactions, getLedgerAdjustments, addLedgerAdjustment } from '../api/supabaseApi';
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Snackbar, Grid } from '@mui/material';
 
 function LedgerPage() {
   const [ledger, setLedger] = useState([]);
-  const [adjustRow, setAdjustRow] = useState(null);
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
@@ -20,7 +19,8 @@ function LedgerPage() {
       filteredTxns.forEach(t => {
         const key = `${t.personName || t.person_name}|${t.contact}`;
         if (!map[key]) map[key] = { person: t.personName || t.person_name, contact: t.contact, totalToTake: 0, totalToGive: 0, transactions: [] };
-        const diff = (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);
+        const txnType = t.transactionType || t.transaction_type;
+        const diff = txnType === 'buy' ? (t.totalPrice ?? t.total_price ?? 0) - (t.amountPaid ?? t.amount_paid ?? 0) : (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);
         if (diff < 0) map[key].totalToTake += Math.abs(diff);
         else if (diff > 0) map[key].totalToGive += diff;
         map[key].transactions.push(t);
@@ -39,7 +39,7 @@ function LedgerPage() {
           console.warn('Ledger adjustments not available:', e.message);
         }
       }
-      const ledgerEntries = Object.values(map).filter(entry => entry.totalToTake >= 10 || entry.totalToGive >= 10);
+      const ledgerEntries = Object.values(map).filter(entry => entry.totalToTake >= 10);
       ledgerEntries.sort((a, b) => Math.max(b.totalToTake, b.totalToGive) - Math.max(a.totalToTake, a.totalToGive));
       setLedger(ledgerEntries);
     } catch (e) {

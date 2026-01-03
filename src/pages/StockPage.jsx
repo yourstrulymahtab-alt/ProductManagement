@@ -13,17 +13,19 @@ function StockPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const fetchData = async () => {
-    try {
-      setProducts(await getProducts());
-      // Only use last 50 transactions for analysis
-      const txns = await getTransactions();
-      setTransactions(txns.slice(0, 50));
-    } catch (e) {
-      // Optionally show error
-    }
-  };
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setProducts(await getProducts());
+        // Only use last 50 transactions for analysis
+        const txns = await getTransactions();
+        setTransactions(txns.slice(0, 50));
+      } catch {
+        // Optionally show error
+      }
+    };
+    fetchData();
+  }, []);
 
   // Low Stock
   const lowStock = products.filter(p => p.stock < 10);

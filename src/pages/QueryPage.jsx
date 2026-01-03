@@ -27,8 +27,6 @@ function QueryPage() {
       const table = match[1];
       // Only allow products or transactions for now
       if (!['products', 'transactions'].includes(table)) throw new Error('Only products or transactions table allowed.');
-      // Remove trailing semicolon if present
-      const cleanQuery = query.replace(/;\s*$/, '');
       // Use Supabase's select for simple queries
       let { data, error } = await supabase.from(table).select('*');
       if (error) throw error;

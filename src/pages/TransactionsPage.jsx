@@ -1,7 +1,7 @@
 // ...existing code...
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { getProducts, getTransactions, addTransaction, clearTransactions, reverseTransaction } from '../api/supabaseApi';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { getProducts, getTransactions, addTransaction, reverseTransaction } from '../api/supabaseApi';
 import { PRODUCT_SALES_TYPE } from '../api/productModel';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Snackbar, IconButton, Grid, useMediaQuery, Select, MenuItem, Autocomplete } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -42,15 +42,15 @@ function TransactionsPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Helper function to convert UTC timestamp to IST
-  const convertToIST = (utcDateString) => {
+  const convertToIST = useCallback((utcDateString) => {
     if (!utcDateString) return '';
     const utcDate = new Date(utcDateString);
     const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
     const istDate = new Date(utcDate.getTime() + istOffset);
     return istDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-  };
+  }, []);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const txns = await getTransactions();
       setTransactions(txns.slice(0, 50));
@@ -58,8 +58,8 @@ function TransactionsPage() {
     } catch (e) {
       setSnackbar({ open: true, message: e.message });
     }
-  };
-  useEffect(() => { fetchData(); }, []);
+  }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const personContactOptions = useMemo(() => {
     const unique = new Set();
@@ -130,15 +130,7 @@ function TransactionsPage() {
     }
   };
 
-  const handleClear = async () => {
-    try {
-      await clearTransactions();
-      fetchData();
-      setSnackbar({ open: true, message: 'All transactions cleared.' });
-    } catch (e) {
-      setSnackbar({ open: true, message: e.message });
-    }
-  };
+
 
   const handleReverseClick = (txn) => {
     setSelectedTxn(txn);
@@ -327,16 +319,6 @@ function TransactionsPage() {
                 margin="dense"
                 value={form.transactionPrice}
                 onChange={e => setForm(f => ({ ...f, transactionPrice: e.target.value }))}
-                onFocus={e => {
-                  // Set default value if empty and product/type selected
-                  if (!form.transactionPrice && form.productId && form.transactionType) {
-                    const product = products.find(p => p.id === parseInt(form.productId));
-                    if (product) {
-                      const actualPrice = form.transactionType === 'buy' ? product.costPrice : product.sellPrice;
-                      setForm(f => ({ ...f, transactionPrice: actualPrice }));
-                    }
-                  }
-                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>

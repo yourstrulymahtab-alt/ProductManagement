@@ -1,12 +1,7 @@
-# TODO: Add Payment Input to Billing Page
+# TODO: Fix 'BUY' transaction subtraction in Ledger Page
 
-## Steps to Complete:
-- [ ] Import addLedgerAdjustment in BillingPage.jsx
-- [ ] Add paymentAmount state variable (string, default '')
-- [ ] Add TextField for "Payment Amount" below the total display
-- [ ] Modify total calculation to compute adjustedTotal = total - parseFloat(paymentAmount || 0) and display adjusted total
-- [ ] Update handleSaveAndGenerateBill to add ledger adjustment if paymentAmount > 0 after saving transactions
-- [ ] Update generateBillHtml function to accept paidAmount parameter, remove "Paid" column from table, add "Paid Amount" below table, and adjust total display
-- [ ] Update bill preview and download HTML generation to use adjusted total and include paidAmount
-- [ ] Clear paymentAmount input after successful bill generation
-- [ ] Store paidAmount in lastBill for download purposes
+- [x] Modify the diff calculation in fetchLedger function in LedgerPage.jsx to account for transaction type ('buy' vs 'sell')
+  - For 'sell': diff = amountPaid - totalPrice
+  - For 'buy': diff = totalPrice - amountPaid
+- [x] Verify the change by checking the logic ensures 'buy' transactions are correctly subtracted from the amount to take/give
+- [x] Filter ledger entries to only show records where Total to Take >= 10, excluding Total to Give entries

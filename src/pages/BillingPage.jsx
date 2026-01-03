@@ -25,9 +25,7 @@ function BillingPage() {
     getUniqueCustomers().then(setCustomers).catch(() => {});
   }, []);
 
-  const handleCustomerChange = (e) => {
-    setCustomer({ ...customer, [e.target.name]: e.target.value });
-  };
+
 
   const handleTxnChange = (idx, field, value) => {
     const newTxns = [...transactions];
@@ -66,7 +64,7 @@ function BillingPage() {
 
   const handleSaveAndGenerateBill = async () => {
     // Check for duplicate submission within 2 minutes
-    const currentTime = Date.now();
+    const currentTime = new Date().getTime();
     const payload = { customer, transactions };
     const payloadString = JSON.stringify(payload);
     const payloadHash = btoa(payloadString); // Simple hash using base64
@@ -254,11 +252,6 @@ function BillingPage() {
     const found = customers.find(c => c.person_name === name);
     return found ? found.contact : '';
   };
-  // Helper to get name by contact
-  const getNameByContact = (contact) => {
-    const found = customers.find(c => c.contact === contact);
-    return found ? found.person_name : '';
-  };
 
   return (
     <Box>
@@ -355,15 +348,7 @@ function BillingPage() {
                   <TextField name="costPrice" value={t.costPrice} size="small" type="number" disabled sx={{ minWidth: 120 }} />
                 </TableCell>
                 <TableCell>
-                  <TextField name="transactionPrice" value={t.transactionPrice} onChange={e => handleTxnChange(idx, 'transactionPrice', e.target.value)} size="small" type="number" sx={{ minWidth: 120 }} onFocus={e => {
-                    if (!t.transactionPrice && t.productId && t.transactionType) {
-                      const product = products.find(p => p.id === parseInt(t.productId));
-                      if (product) {
-                        const actualPrice = t.transactionType === 'buy' ? product.costPrice : product.sellPrice;
-                        handleTxnChange(idx, 'transactionPrice', actualPrice);
-                      }
-                    }
-                  }} />
+                  <TextField name="transactionPrice" value={t.transactionPrice} onChange={e => handleTxnChange(idx, 'transactionPrice', e.target.value)} size="small" type="number" sx={{ minWidth: 120 }} />
                 </TableCell>
                 <TableCell>
                   <TextField name="amountPaid" value={t.amountPaid} onChange={e => handleTxnChange(idx, 'amountPaid', e.target.value)} size="small" type="number" sx={{ minWidth: 100 }} />
