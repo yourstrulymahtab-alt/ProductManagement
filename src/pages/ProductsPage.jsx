@@ -30,6 +30,8 @@ function ProductsPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  const getDisplayName = (product) => `${product.name}${product.description ? ` (${product.description})` : ''}`;
+
   const fetchProducts = async () => {
     try {
       const prods = await getProducts();
@@ -167,7 +169,7 @@ function ProductsPage() {
             {filteredProducts.map((p) => (
               <TableRow key={p.id} hover>
                 <TableCell>{p.id}</TableCell>
-                <TableCell>{p.name}</TableCell>
+                <TableCell>{getDisplayName(p)}</TableCell>
                 <TableCell>{p.salesType === PRODUCT_SALES_TYPE.WEIGHT ? 'Weight (kg)' : 'Quantity'}</TableCell>
                 <TableCell>{p.costPrice}</TableCell>
                 <TableCell>{p.sellPrice}</TableCell>

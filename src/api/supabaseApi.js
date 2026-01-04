@@ -25,8 +25,17 @@ export const addProduct = async (product) => {
     const changedFields = Object.keys(updateFields);
     const changeType = (changedFields.length === 1 && changedFields[0] === 'stock') ? 'add_stock' : 'edit';
 
-    // Log the change
-    await logProductChange(product.id, changeType, oldProduct, { ...oldProduct, ...updateFields });
+    // Log the change with specific fields
+    await logProductChange(
+      product.id,
+      changeType,
+      oldProduct.stock,
+      updateFields.stock !== undefined ? updateFields.stock : oldProduct.stock,
+      oldProduct.costPrice,
+      updateFields.costPrice !== undefined ? updateFields.costPrice : oldProduct.costPrice,
+      oldProduct.sellPrice,
+      updateFields.sellPrice !== undefined ? updateFields.sellPrice : oldProduct.sellPrice
+    );
   } else {
     const { error } = await supabase.from('products').insert([product]);
     if (error) throw error;
@@ -34,7 +43,7 @@ export const addProduct = async (product) => {
     // Log the add (need to get the inserted id)
     const { data: insertedProduct, error: insertFetchErr } = await supabase.from('products').select('*').eq('name', product.name).order('id', { ascending: false }).limit(1).single();
     if (insertFetchErr) throw insertFetchErr;
-    await logProductChange(insertedProduct.id, 'add', null, insertedProduct);
+    await logProductChange(insertedProduct.id, 'add', null, insertedProduct.stock, null, insertedProduct.costPrice, null, insertedProduct.sellPrice);
   }
 };
 
@@ -48,7 +57,7 @@ export const deleteProduct = async (id) => {
   if (error) throw error;
 
   // Log the delete
-  await logProductChange(id, 'delete', oldProduct, null);
+  await logProductChange(id, 'delete', oldProduct.stock, null, oldProduct.costPrice, null, oldProduct.sellPrice, null);
 };
 
 // TRANSACTIONS

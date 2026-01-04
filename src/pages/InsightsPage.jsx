@@ -54,8 +54,30 @@ function InsightsPage() {
     fetchData();
   }, []);
 
-  // Low Stock
-  const lowStock = products.filter(p => p.stock < 10);
+  // Low Stock (stock < 30)
+  const getSoldQuantities = () => {
+    const stats = {};
+    transactions.filter(t => t.transaction_type === 'sell' || t.transactionType === 'sell').forEach(t => {
+      const productId = t.product_id || t.productId;
+      if (!stats[productId]) stats[productId] = 0;
+      stats[productId] += Number(t.quantity) || 0;
+    });
+    return stats;
+  };
+
+  const soldQuantities = getSoldQuantities();
+
+  const lowStock = products
+    .filter(p => p.stock < 30)
+    .sort((a, b) => {
+      const aSold = soldQuantities[a.id] || 0;
+      const bSold = soldQuantities[b.id] || 0;
+      if (aSold > 0 || bSold > 0) {
+        return bSold - aSold; // Most sold first
+      } else {
+        return a.costPrice - b.costPrice; // Least cost price first
+      }
+    });
 
   // Out of Stock
   const outOfStock = products.filter(p => p.stock === 0);
@@ -285,7 +307,7 @@ function InsightsPage() {
             <CardContent>
               <Typography variant="h6" color="warning.main" gutterBottom>Low Stock Products</Typography>
               <List dense sx={{ maxHeight: 200, overflow: 'auto' }}>
-                {lowStock.length ? lowStock.map(p => <ListItem key={p.id}><ListItemText primary={p.name} /></ListItem>) : <ListItem><ListItemText primary="N/A" /></ListItem>}
+                {lowStock.length ? lowStock.map(p => <ListItem key={p.id}><ListItemText primary={`${p.name} (${p.stock})`} /></ListItem>) : <ListItem><ListItemText primary="N/A" /></ListItem>}
               </List>
             </CardContent>
           </Card>

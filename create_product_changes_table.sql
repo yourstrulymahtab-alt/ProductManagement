@@ -1,10 +1,14 @@
--- Create product_changes table to track changes in products table from ProductsPage
+-- Create product_changes table to track changes in stock, costPrice, and sellPrice from ProductsPage
 CREATE TABLE product_changes (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL,
   change_type TEXT NOT NULL, -- 'add', 'edit', 'delete', 'add_stock'
-  old_values JSONB, -- Store old product data as JSON
-  new_values JSONB, -- Store new product data as JSON
+  old_stock NUMERIC,
+  new_stock NUMERIC,
+  old_cost_price NUMERIC,
+  new_cost_price NUMERIC,
+  old_sell_price NUMERIC,
+  new_sell_price NUMERIC,
   timestamp TIMESTAMP DEFAULT NOW()
 );
 
