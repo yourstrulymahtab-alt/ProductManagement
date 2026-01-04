@@ -5,6 +5,33 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
 function BillingPage() {
+  const toRoman = (num) => {
+    if (num <= 0 || num > 3999) return num.toString();
+    const romanNumerals = [
+      { value: 1000, symbol: 'M' },
+      { value: 900, symbol: 'CM' },
+      { value: 500, symbol: 'D' },
+      { value: 400, symbol: 'CD' },
+      { value: 100, symbol: 'C' },
+      { value: 90, symbol: 'XC' },
+      { value: 50, symbol: 'L' },
+      { value: 40, symbol: 'XL' },
+      { value: 10, symbol: 'X' },
+      { value: 9, symbol: 'IX' },
+      { value: 5, symbol: 'V' },
+      { value: 4, symbol: 'IV' },
+      { value: 1, symbol: 'I' }
+    ];
+    let result = '';
+    for (let i = 0; i < romanNumerals.length; i++) {
+      while (num >= romanNumerals[i].value) {
+        result += romanNumerals[i].symbol;
+        num -= romanNumerals[i].value;
+      }
+    }
+    return result;
+  };
+
   const [customer, setCustomer] = useState({ name: '', contact: '' });
   const [transactions, setTransactions] = useState([
     { productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell', costPrice: '' }
@@ -312,7 +339,7 @@ function BillingPage() {
               <TableCell>Product</TableCell>
               <TableCell>Quantity</TableCell>
               <TableCell>Actual Price</TableCell>
-              <TableCell>Cost Price</TableCell>
+              <TableCell>Threshold</TableCell>
               <TableCell>Txn Price</TableCell>
               <TableCell>Paid</TableCell>
               <TableCell>Total</TableCell>
@@ -345,7 +372,7 @@ function BillingPage() {
                   <TextField name="actualPrice" value={t.actualPrice} size="small" type="number" disabled sx={{ minWidth: 120 }} />
                 </TableCell>
                 <TableCell>
-                  <TextField name="costPrice" value={t.costPrice} size="small" type="number" disabled sx={{ minWidth: 120 }} />
+                  <TextField name="costPrice" value={toRoman(Math.ceil(parseFloat(t.costPrice) || 0))} size="small" type="text" disabled sx={{ minWidth: 120 }} />
                 </TableCell>
                 <TableCell>
                   <TextField name="transactionPrice" value={t.transactionPrice} onChange={e => handleTxnChange(idx, 'transactionPrice', e.target.value)} size="small" type="number" sx={{ minWidth: 120 }} />
