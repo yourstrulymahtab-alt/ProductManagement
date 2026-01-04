@@ -279,6 +279,66 @@ function BillingPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleDownload57mm = () => {
+    const allReturn = lastBillData.transactions.every(t => t.transactionType === 'return');
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>57mm Bill</title>
+      <style>
+        body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 200px; word-wrap: break-word; overflow-wrap: break-word; }
+        .center { text-align: center; }
+        .left { text-align: left; }
+        .right { text-align: right; }
+        .item { margin-bottom: 5px; }
+        .header { font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 2px 0; vertical-align: top; }
+        .num { width: 10%; text-align: center; }
+        .prod { width: 45%; word-wrap: break-word; overflow-wrap: break-word; }
+        .qty { width: 15%; text-align: center; }
+        .total { width: 20%; text-align: right; }
+        .type { width: 10%; text-align: center; }
+      </style>
+    </head><body>
+      <div class='center header'>JHARKHAND STEEL</div>
+      <div class='center header'>BILL</div>
+      <br>
+      <div class='left item'>Name: ${lastBillData.customer.name}</div>
+      <div class='left item'>Contact: ${lastBillData.customer.contact}</div>
+      <div class='left item'>Date: ${new Date().toLocaleString()}</div>
+      <br>
+      <table>
+        <thead>
+          <tr><th class='center'>#</th><th class='left'>Prod</th><th class='center'>Qty</th><th class='right'>Total</th><th class='center'>Type</th></tr>
+        </thead>
+        <tbody>
+          ${lastBillData.transactions.map((t, i) => {
+            const prod = products.find(p => p.id == t.productId);
+            const prodName = prod ? prod.name : '';
+            return `<tr><td class='center'>${i + 1}</td><td class='prod'>${prodName}</td><td class='qty'>${t.quantity}</td><td class='total'>${t.totalPrice}</td><td class='center'>${t.transactionType.substring(0, 4)}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      <br>
+      ${!allReturn ? `<div class='left item'>Paid: ${lastBillData.paidAmount.toFixed(2)}</div>` : ''}
+      ${lastBillData.discountAmount > 0 ? `<div class='left item'>Disc: ${lastBillData.discountAmount.toFixed(2)}</div>` : ''}
+      ${!allReturn ? `<div class='right item'>Due: ${lastBillData.total.toFixed(2)}</div>` : ''}
+      <br>
+      <div class='center'>Thank you!</div>
+    </body></html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    const formattedDate = `${dd}_${mm}_${yyyy}`;
+    a.download = `bill_57mm_${lastBillData.customer.name}_${formattedDate}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Helper to get contact by name
   const getContactByName = (name) => {
     const found = customers.find(c => c.person_name === name);
@@ -419,6 +479,7 @@ function BillingPage() {
           <Typography variant="h6">Bill Preview</Typography>
           <div dangerouslySetInnerHTML={{ __html: billHtml }} />
           <Button variant="outlined" sx={{ mt: 1, mr: 2 }} onClick={handleDownloadHTML}>Download Bill</Button>
+          <Button variant="outlined" sx={{ mt: 1, mr: 2 }} onClick={handleDownload57mm}>Download 57mm Bill</Button>
           <Button
             variant="outlined"
             startIcon={<WhatsAppIcon />}
@@ -439,4 +500,3 @@ function BillingPage() {
 }
 
 export default BillingPage;
-

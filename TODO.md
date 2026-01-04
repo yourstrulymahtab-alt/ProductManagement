@@ -1,16 +1,10 @@
-# TODO: Fix 'BUY' transaction subtraction in Ledger Page
+# TODO: Implement Regular Customer Checkbox Feature
 
-- [x] Modify the diff calculation in fetchLedger function in LedgerPage.jsx to account for transaction type ('buy' vs 'sell')
-  - For 'sell': diff = amountPaid - totalPrice
-  - For 'buy': diff = totalPrice - amountPaid
-- [x] Verify the change by checking the logic ensures 'buy' transactions are correctly subtracted from the amount to take/give
-- [x] Filter ledger entries to only show records where Total to Take >= 10, excluding Total to Give entries
-
-# TODO: Implement separate table to track changes in products table from ProductsPage
-
-- [x] Create `create_product_changes_table.sql` file to define the `product_changes` table with fields: id (serial primary key), product_id, change_type, old_stock, new_stock, old_cost_price, new_cost_price, old_sell_price, new_sell_price, timestamp (default now)
-- [x] Add `logProductChange` function in `src/api/supabaseApi.js` to insert into product_changes
-- [x] Modify `addProduct` in `src/api/supabaseApi.js` to log changes: 'add' for new products, 'edit' or 'add_stock' for edits (detect if only stock changed), capture old and new values for stock, costPrice, sellPrice
-- [x] Modify `deleteProduct` in `src/api/supabaseApi.js` to log 'delete' with old values for stock, costPrice, sellPrice
-- [ ] Run the SQL script in Supabase to create the table
-- [ ] Test the logging by performing add, edit, delete, and add stock operations in ProductsPage
+- [ ] Add `isRegular` state (default false) to BillingPage.jsx
+- [ ] Add checkbox labeled "R" in the UI near customer fields
+- [ ] Calculate total sell profit as sum of (transactionPrice - costPrice) * quantity for 'sell' transactions
+- [ ] Implement regular discount: subtract 10% of total sell profit from total when checked
+- [ ] Implement regular penalty: add 10% of total sell profit to total if any 'return' transactions exist when checked
+- [ ] Update adjustedTotal calculation to include regular adjustments
+- [ ] On save, add ledger adjustment with reason 'Regular' if isRegular is true
+- [ ] Update bill generation to reflect regular adjustments
