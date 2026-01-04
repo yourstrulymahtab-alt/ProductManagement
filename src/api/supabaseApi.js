@@ -199,12 +199,16 @@ export const addLedgerAdjustment = async (adjustment) => {
 };
 
 // PRODUCT CHANGES LOGGING
-export const logProductChange = async (productId, changeType, oldValues = null, newValues = null) => {
+export const logProductChange = async (productId, changeType, oldStock = null, newStock = null, oldCostPrice = null, newCostPrice = null, oldSellPrice = null, newSellPrice = null) => {
   const { error } = await supabase.from('product_changes').insert([{
     product_id: productId,
     change_type: changeType,
-    old_values: oldValues,
-    new_values: newValues,
+    old_stock: oldStock,
+    new_stock: newStock,
+    old_cost_price: oldCostPrice,
+    new_cost_price: newCostPrice,
+    old_sell_price: oldSellPrice,
+    new_sell_price: newSellPrice,
   }]);
   if (error) throw error;
 };
