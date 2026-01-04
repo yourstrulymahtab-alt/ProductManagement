@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { getTransactions, getLedgerAdjustments, addLedgerAdjustment } from '../api/supabaseApi';
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Snackbar, Grid } from '@mui/material';
+import { getTransactions, getLedgerAdjustments, addLedgerAdjustment, getProducts } from '../api/supabaseApi';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Snackbar, Grid, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 
 function LedgerPage() {
   const [ledger, setLedger] = useState([]);
@@ -9,6 +9,7 @@ function LedgerPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const [expandedPersons, setExpandedPersons] = useState({});
   const [personAdjustmentHistory, setPersonAdjustmentHistory] = useState({});
+  const [products, setProducts] = useState([]);
 
   const fetchLedger = async () => {
     try {
@@ -49,6 +50,7 @@ function LedgerPage() {
 
   useEffect(() => {
     fetchLedger();
+    getProducts().then(setProducts).catch(() => {});
   }, []);
 
   const handleAdjust = async (person, contact) => {
@@ -90,6 +92,97 @@ function LedgerPage() {
     }
   };
 
+  const handleDownloadAdjustments = async (person, contact) => {
+    try {
+      const adjustments = await getLedgerAdjustments(person, contact);
+      const grouped = adjustments.reduce((acc, adj) => {
+        const date = new Date(adj.adjustment_date).toLocaleDateString('en-GB');
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(adj);
+        return acc;
+      }, {});
+      const content = Object.keys(grouped).sort().map(date => {
+        const items = grouped[date].map(adj => `${adj.adjustment_amount} "${adj.reason}"`).join('\n');
+        return `${date}:\n${items}`;
+      }).join('\n\n');
+      const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>Adjustments</title>
+        <style>
+          body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 200px; white-space: pre-wrap; }
+          .center { text-align: center; }
+          .header { font-weight: bold; }
+        </style>
+      </head><body>
+        <div class='center header'>JHARKHAND STEEL</div>
+        <div class='center header'>ADJUSTMENT HISTORY</div>
+        <br>
+        <div>Name: ${person}</div>
+        <div>Contact: ${contact}</div>
+        <br>
+        ${content}
+        <br>
+        <div class='center'>Thank you!</div>
+      </body></html>`;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `adjustments_${person}_${contact}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setSnackbar({ open: true, message: e.message });
+    }
+  };
+
+  const handleDownloadTransactions = async (person, contact) => {
+    try {
+      const allTxns = await getTransactions();
+      const txns = allTxns.filter(t => (t.personName || t.person_name) === person && t.contact === contact && !t.reversed);
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      const recentTxns = txns.filter(t => new Date(t.transactionDate || t.transaction_date) >= threeMonthsAgo);
+      const grouped = recentTxns.reduce((acc, txn) => {
+        const date = new Date(txn.transactionDate || txn.transaction_date).toLocaleDateString('en-GB');
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(txn);
+        return acc;
+      }, {});
+      const content = Object.keys(grouped).sort().map(date => {
+        const tableRows = grouped[date].map(txn => {
+          const prod = products.find(p => p.id == txn.product_id);
+          return `<tr><td style="width: 45%; word-wrap: break-word;">${prod ? prod.name : 'Unknown'}</td><td>${txn.quantity}</td><td>${txn.totalPrice || txn.total_price}</td><td>${txn.transactionType || txn.transaction_type}</td></tr>`;
+        }).join('');
+        return `<div><strong>${date}:</strong></div><table style="width: 100%; border-collapse: collapse;">${tableRows}</table>`;
+      }).join('<br>');
+      const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>Transactions</title>
+        <style>
+          body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 200px; white-space: pre-wrap; }
+          .center { text-align: center; }
+          .header { font-weight: bold; }
+        </style>
+      </head><body>
+        <div class='center header'>JHARKHAND STEEL</div>
+        <div class='center header'>TRANSACTION HISTORY</div>
+        <br>
+        <div>Name: ${person}</div>
+        <div>Contact: ${contact}</div>
+        <br>
+        ${content}
+        <br>
+        <div class='center'>Thank you!</div>
+      </body></html>`;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `transactions_${person}_${contact}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setSnackbar({ open: true, message: e.message });
+    }
+  };
+
   return (
     <Box sx={{ maxWidth: 1000, mx: 'auto', p: 2 }}>
       <Grid container alignItems="center" justifyContent="space-between" spacing={2} sx={{ mb: 2 }}>
@@ -101,83 +194,99 @@ function LedgerPage() {
         </Grid>
       </Grid>
       {ledger.map((entry, idx) => (
-        <Box key={idx} sx={{ mb: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
-          <Typography variant="h6" sx={{ color: 'blue' }}>{entry.person} ({entry.contact})</Typography>
-          <Typography color={entry.totalToTake > 0 ? 'error' : 'primary'}>
-            {entry.totalToTake > 0 ? `Total to Take: ₹${entry.totalToTake.toFixed(2)}` : `Total to Give: ₹${entry.totalToGive.toFixed(2)}`}
-          </Typography>
-          <Grid container spacing={2} sx={{ mt: 1, alignItems: 'center' }}>
-            <Grid item>
-              <TextField size="small" type="number" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} placeholder="Enter adjustment" />
-            </Grid>
-            <Grid item>
-              <TextField size="small" value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder="Reason" />
-            </Grid>
-            <Grid item>
-              <Button size="small" onClick={() => handleAdjust(entry.person, entry.contact)}>Adjust Total</Button>
-            </Grid>
-            <Grid item>
-              <Button size="small" onClick={() => toggleExpansion(entry.person, entry.contact)}>
-                {expandedPersons[`${entry.person}|${entry.contact}`] ? 'Hide' : 'Show'} History
-              </Button>
-            </Grid>
-          </Grid>
-          {expandedPersons[`${entry.person}|${entry.contact}`] && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>Adjustment History</Typography>
-              {personAdjustmentHistory[`${entry.person}|${entry.contact}`] && personAdjustmentHistory[`${entry.person}|${entry.contact}`].length > 0 ? (
-                <TableContainer component={Paper} sx={{ maxHeight: 300, overflowY: 'auto' }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Adjustment Amount</TableCell>
-                        <TableCell>Reason</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {personAdjustmentHistory[`${entry.person}|${entry.contact}`].map(adj => (
-                        <TableRow key={adj.id}>
-                          <TableCell>{new Date(adj.adjustment_date).getDate()+"/"+(new Date(adj.adjustment_date).getMonth()+1)+"/"+new Date(adj.adjustment_date).getFullYear()}</TableCell>
-                          <TableCell>{adj.adjustment_amount}</TableCell>
-                          <TableCell>{adj.reason}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Typography variant="body2" color="textSecondary">No adjustments recorded.</Typography>
-              )}
+        <Accordion key={idx} sx={{ mb: 2 }}>
+          <AccordionSummary expandIcon={<Typography>▼</Typography>}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <Typography variant="h6" sx={{ color: 'white', fontFamily: 'Garamond, serif', textTransform: 'uppercase' }}>{entry.person} ({entry.contact})</Typography>
+              <Typography color={entry.totalToTake > 0 ? 'error' : 'primary'}>
+                {entry.totalToTake > 0 ? `Due: ₹${entry.totalToTake.toFixed(2)}` : `Due: ₹${entry.totalToGive.toFixed(2)}`}
+              </Typography>
             </Box>
-          )}
-          <TableContainer component={Paper} sx={{ mt: 2 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Product Name</TableCell>
-                  <TableCell>Total Price</TableCell>
-                  <TableCell>Amount Paid</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {entry.transactions.map(txn => (
-                  <TableRow key={txn.id}>
-                    <TableCell>{txn.id}</TableCell>
-                    <TableCell>{new Date(txn.transactionDate || txn.transaction_date).toISOString().split('T')[0]}</TableCell>
-                    <TableCell>{txn.transactionType || txn.transaction_type}</TableCell>
-                    <TableCell>{txn.productName}</TableCell>
-                    <TableCell>{txn.totalPrice ?? txn.total_price ?? ''}</TableCell>
-                    <TableCell>{txn.amountPaid ?? txn.amount_paid ?? ''}</TableCell>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Grid container spacing={2} sx={{ mt: 1, alignItems: 'center' }}>
+              <Grid item>
+                <TextField size="small" type="number" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} placeholder="Enter adjustment" />
+              </Grid>
+              <Grid item>
+                <TextField size="small" value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder="Reason" />
+              </Grid>
+              <Grid item>
+                <Button size="small" onClick={() => handleAdjust(entry.person, entry.contact)}>Adjust Total</Button>
+              </Grid>
+              <Grid item>
+                <Button size="small" onClick={() => toggleExpansion(entry.person, entry.contact)}>
+                  {expandedPersons[`${entry.person}|${entry.contact}`] ? 'Hide' : 'Show'} History
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button size="small" onClick={() => handleDownloadAdjustments(entry.person, entry.contact)}>
+                  Download Adjustments
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button size="small" onClick={() => handleDownloadTransactions(entry.person, entry.contact)}>
+                  Download Transactions
+                </Button>
+              </Grid>
+            </Grid>
+            {expandedPersons[`${entry.person}|${entry.contact}`] && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Adjustment History</Typography>
+                {personAdjustmentHistory[`${entry.person}|${entry.contact}`] && personAdjustmentHistory[`${entry.person}|${entry.contact}`].length > 0 ? (
+                  <TableContainer component={Paper} sx={{ maxHeight: 300, overflowY: 'auto' }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Date</TableCell>
+                          <TableCell>Adjustment Amount</TableCell>
+                          <TableCell>Reason</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {personAdjustmentHistory[`${entry.person}|${entry.contact}`].map(adj => (
+                          <TableRow key={adj.id}>
+                            <TableCell>{new Date(adj.adjustment_date).getDate()+"/"+(new Date(adj.adjustment_date).getMonth()+1)+"/"+new Date(adj.adjustment_date).getFullYear()}</TableCell>
+                            <TableCell>{adj.adjustment_amount}</TableCell>
+                            <TableCell>{adj.reason}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <Typography variant="body2" color="textSecondary">No adjustments recorded.</Typography>
+                )}
+              </Box>
+            )}
+            <TableContainer component={Paper} sx={{ mt: 2 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Product Name</TableCell>
+                    <TableCell>Total Price</TableCell>
+                    <TableCell>Amount Paid</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
+                </TableHead>
+                <TableBody>
+                  {entry.transactions.map(txn => (
+                    <TableRow key={txn.id}>
+                      <TableCell>{txn.id}</TableCell>
+                      <TableCell>{new Date(txn.transactionDate || txn.transaction_date).toISOString().split('T')[0]}</TableCell>
+                      <TableCell>{txn.transactionType || txn.transaction_type}</TableCell>
+                      <TableCell>{txn.productName}</TableCell>
+                      <TableCell>{txn.totalPrice ?? txn.total_price ?? ''}</TableCell>
+                      <TableCell>{txn.amountPaid ?? txn.amount_paid ?? ''}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </AccordionDetails>
+        </Accordion>
       ))}
       <Snackbar open={snackbar.open} autoHideDuration={2000} onClose={() => setSnackbar({ open: false, message: '' })} message={snackbar.message} />
     </Box>
