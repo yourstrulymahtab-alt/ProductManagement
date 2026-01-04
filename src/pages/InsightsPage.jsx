@@ -31,8 +31,11 @@ ChartJS.register(
 function InsightsPage() {
   const [products, setProducts] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const [startDate, setStartDate] = useState(today.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(tomorrow.toISOString().split('T')[0]);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -114,7 +117,7 @@ function InsightsPage() {
     if (!startDate || !endDate) return { sales: 0, profit: 0 };
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const filtered = transactions.filter(t => (t.transaction_type === 'sell' || t.transactionType === 'sell') && new Date(t.transaction_date || t.transactionDate) >= start && new Date(t.transaction_date || t.transactionDate) <= end);
+    const filtered = transactions.filter(t => ((t.transaction_type === 'sell' || t.transactionType === 'sell') || (t.transaction_type === 'return' || t.transactionType === 'return')) && new Date(t.transaction_date || t.transactionDate) >= start && new Date(t.transaction_date || t.transactionDate) <= end);
     let sales = 0;
     let profit = 0;
     filtered.forEach(t => {
@@ -123,8 +126,15 @@ function InsightsPage() {
       const product = products.find(p => p.id === t.product_id || p.id === t.productId);
       const costPrice = product ? Number(product.costPrice) : 0;
       if (!isNaN(qty) && !isNaN(txnPrice)) {
-        sales += qty * txnPrice;
-        profit += qty * (txnPrice - costPrice);
+        const amount = qty * txnPrice;
+        const profitAmount = qty * (txnPrice - costPrice);
+        if (t.transaction_type === 'return' || t.transactionType === 'return') {
+          sales -= amount;
+          profit -= profitAmount;
+        } else {
+          sales += amount;
+          profit += profitAmount;
+        }
       }
     });
     return { sales, profit };
@@ -133,7 +143,7 @@ function InsightsPage() {
   // Daily sales and profit data for chart
   const getDailySalesProfitData = () => {
     const dailyData = {};
-    transactions.filter(t => t.transaction_type === 'sell' || t.transactionType === 'sell').forEach(t => {
+    transactions.filter(t => (t.transaction_type === 'sell' || t.transactionType === 'sell') || (t.transaction_type === 'return' || t.transactionType === 'return')).forEach(t => {
       const date = new Date(t.transaction_date || t.transactionDate).toISOString().split('T')[0];
       if (!dailyData[date]) dailyData[date] = { sales: 0, profit: 0 };
       const qty = Number(t.quantity);
@@ -141,8 +151,15 @@ function InsightsPage() {
       const product = products.find(p => p.id === t.product_id || p.id === t.productId);
       const costPrice = product ? Number(product.costPrice) : 0;
       if (!isNaN(qty) && !isNaN(txnPrice)) {
-        dailyData[date].sales += qty * txnPrice;
-        dailyData[date].profit += qty * (txnPrice - costPrice);
+        const amount = qty * txnPrice;
+        const profitAmount = qty * (txnPrice - costPrice);
+        if (t.transaction_type === 'return' || t.transactionType === 'return') {
+          dailyData[date].sales -= amount;
+          dailyData[date].profit -= profitAmount;
+        } else {
+          dailyData[date].sales += amount;
+          dailyData[date].profit += profitAmount;
+        }
       }
     });
     const sortedDates = Object.keys(dailyData).sort();
