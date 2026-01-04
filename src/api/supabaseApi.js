@@ -11,19 +11,44 @@ export const getProducts = async () => {
 // Add or update product
 export const addProduct = async (product) => {
   if (product.isEdit && product.id) {
+    // Fetch old product data for logging
+    const { data: oldProduct, error: fetchErr } = await supabase.from('products').select('*').eq('id', product.id).single();
+    if (fetchErr) throw fetchErr;
+    if (!oldProduct) throw new Error('Product not found');
+
     // Remove isEdit before update
     const { id, isEdit: _isEdit, ...updateFields } = product;
     const { error } = await supabase.from('products').update(updateFields).eq('id', id);
     if (error) throw error;
+
+    // Determine change type: 'add_stock' if only stock changed, else 'edit'
+    const changedFields = Object.keys(updateFields);
+    const changeType = (changedFields.length === 1 && changedFields[0] === 'stock') ? 'add_stock' : 'edit';
+
+    // Log the change
+    await logProductChange(product.id, changeType, oldProduct, { ...oldProduct, ...updateFields });
   } else {
     const { error } = await supabase.from('products').insert([product]);
     if (error) throw error;
+
+    // Log the add (need to get the inserted id)
+    const { data: insertedProduct, error: insertFetchErr } = await supabase.from('products').select('*').eq('name', product.name).order('id', { ascending: false }).limit(1).single();
+    if (insertFetchErr) throw insertFetchErr;
+    await logProductChange(insertedProduct.id, 'add', null, insertedProduct);
   }
 };
 
 export const deleteProduct = async (id) => {
+  // Fetch old product data for logging
+  const { data: oldProduct, error: fetchErr } = await supabase.from('products').select('*').eq('id', id).single();
+  if (fetchErr) throw fetchErr;
+  if (!oldProduct) throw new Error('Product not found');
+
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) throw error;
+
+  // Log the delete
+  await logProductChange(id, 'delete', oldProduct, null);
 };
 
 // TRANSACTIONS
@@ -161,5 +186,16 @@ export const getLedgerAdjustments = async (personName, contact) => {
 
 export const addLedgerAdjustment = async (adjustment) => {
   const { error } = await supabase.from('ledger_adjustments').insert([adjustment]);
+  if (error) throw error;
+};
+
+// PRODUCT CHANGES LOGGING
+export const logProductChange = async (productId, changeType, oldValues = null, newValues = null) => {
+  const { error } = await supabase.from('product_changes').insert([{
+    product_id: productId,
+    change_type: changeType,
+    old_values: oldValues,
+    new_values: newValues,
+  }]);
   if (error) throw error;
 };
