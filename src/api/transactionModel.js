@@ -8,7 +8,7 @@
 //   transactionPrice: 16, // price at which it is bought/sold (user input)
 //   totalPrice: 160, // transactionPrice * quantity
 //   amountPaid: 160, // user input
-//   transaction_type: 'buy' | 'sell',
+//   transaction_type: 'return' | 'sell',
 //   person_name: 'John',
 //   contact: '1234567890',
 //   transaction_date: ...

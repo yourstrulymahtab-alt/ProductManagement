@@ -77,7 +77,7 @@ export const addTransaction = async (txn) => {
     if (prodErr) throw prodErr;
     if (!product) throw new Error('Product not found');
     let newStock = product.stock;
-    if (txn.transaction_type === 'buy') {
+    if (txn.transaction_type === 'return') {
       newStock += txn.quantity;
     } else if (txn.transaction_type === 'sell') {
       newStock -= txn.quantity;
@@ -104,11 +104,11 @@ export const reverseTransaction = async (txnId) => {
   if (txn.transaction_type === 'sell') {
     // Sell reversed -> add quantity back
     newStock += txn.quantity;
-  } else if (txn.transaction_type === 'buy') {
-    // Buy reversed -> remove quantity from stock
+  } else if (txn.transaction_type === 'return') {
+    // Return reversed -> remove quantity from stock
     newStock -= txn.quantity;
     if (newStock < 0) {
-      throw new Error('Cannot reverse buy transaction because product stock would become negative');
+      throw new Error('Cannot reverse return transaction because product stock would become negative');
     }
   }
 

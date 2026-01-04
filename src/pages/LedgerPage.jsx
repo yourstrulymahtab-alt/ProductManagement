@@ -20,7 +20,7 @@ function LedgerPage() {
         const key = `${t.personName || t.person_name}|${t.contact}`;
         if (!map[key]) map[key] = { person: t.personName || t.person_name, contact: t.contact, totalToTake: 0, totalToGive: 0, transactions: [] };
         const txnType = t.transactionType || t.transaction_type;
-        const diff = txnType === 'buy' ? (t.totalPrice ?? t.total_price ?? 0) - (t.amountPaid ?? t.amount_paid ?? 0) : (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);
+        const diff = txnType === 'return' ? (t.totalPrice ?? t.total_price ?? 0) - (t.amountPaid ?? t.amount_paid ?? 0) : (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);
         if (diff < 0) map[key].totalToTake += Math.abs(diff);
         else if (diff > 0) map[key].totalToGive += diff;
         map[key].transactions.push(t);

@@ -172,7 +172,7 @@ function InsightsPage() {
       const qty = Number(t.quantity);
       const product = products.find(p => p.id === t.product_id || p.id === t.productId);
       const costPrice = product ? Number(product.costPrice) : 0;
-      if (t.transaction_type === 'buy' || t.transactionType === 'buy') {
+      if (t.transaction_type === 'return' || t.transactionType === 'return') {
         dailyData[date] += qty * costPrice;
       } else if (t.transaction_type === 'sell' || t.transactionType === 'sell') {
         dailyData[date] -= qty * costPrice;

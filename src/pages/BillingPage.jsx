@@ -41,7 +41,7 @@ function BillingPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const [billGenerated, setBillGenerated] = useState(false);
   const [billHtml, setBillHtml] = useState('');
-  const [lastBill, setLastBill] = useState({ customer: { name: '', contact: '' }, transactions: [], total: 0, grossTotal: 0, paidAmount: 0 });
+  const [lastBillData, setLastBillData] = useState({ customer: { name: '', contact: '' }, transactions: [], total: 0, grossTotal: 0, paidAmount: 0 });
   const [lastPayloadHash, setLastPayloadHash] = useState(null);
   const [lastSubmissionTime, setLastSubmissionTime] = useState(0);
   const [paymentAmount, setPaymentAmount] = useState('0');
@@ -61,7 +61,7 @@ function BillingPage() {
     if (field === 'productId' || field === 'transactionType') {
       const product = products.find(p => p.id === parseInt(newTxns[idx].productId));
       if (product) {
-        const actualPrice = newTxns[idx].transactionType === 'buy' ? product.costPrice : product.sellPrice;
+        const actualPrice = newTxns[idx].transactionType === 'return' ? product.sellPrice : product.sellPrice;
         newTxns[idx].actualPrice = actualPrice;
         newTxns[idx].transactionPrice = actualPrice;
         newTxns[idx].costPrice = product.costPrice;
@@ -86,7 +86,10 @@ function BillingPage() {
     setTransactions(transactions.filter((_, i) => i !== idx));
   };
 
-  const total = transactions.reduce((sum, t) => sum + parseFloat(t.totalPrice || 0), 0);
+  const total = transactions.reduce((sum, t) => {
+    const price = parseFloat(t.totalPrice || 0);
+    return t.transactionType === 'return' ? sum - price : sum + price;
+  }, 0);
   const adjustedTotal = total - parseFloat(paymentAmount || 0) - parseFloat(discountAmount || 0);
 
   const handleSaveAndGenerateBill = async () => {
@@ -178,7 +181,7 @@ function BillingPage() {
         });
       }
       // Store the bill data before clearing inputs
-      setLastBill({ customer: customer, transactions: transactions, total: adjustedTotal, grossTotal: total, paidAmount: parseFloat(paymentAmount) || 0, discountAmount: parseFloat(discountAmount) || 0 });
+      setLastBillData({ customer: customer, transactions: transactions, total: adjustedTotal, grossTotal: total, paidAmount: parseFloat(paymentAmount) || 0, discountAmount: parseFloat(discountAmount) || 0 });
       // Update duplicate prevention state
       setLastPayloadHash(payloadHash);
       setLastSubmissionTime(currentTime);
@@ -197,6 +200,7 @@ function BillingPage() {
 
   const generateBillHtml = (customer, transactions, total, paidAmount = 0, discountAmount = 0) => {
     const adjustedTotal = total - paidAmount - discountAmount;
+    const allReturn = transactions.every(t => t.transactionType === 'return');
     let rows = transactions.map((t, i) => {
       const prod = products.find(p => p.id == t.productId);
       return `<tr><td>${i + 1}</td><td>${prod ? prod.name : ''}</td><td>${t.quantity}</td><td>${t.transactionPrice}</td><td>${t.totalPrice}</td><td>${t.transactionType}</td></tr>`;
@@ -214,9 +218,9 @@ function BillingPage() {
             <tbody>${rows}</tbody>
           </table>
           <br>
-          <p><b>Payment Amount:</b> ${paidAmount.toFixed(2)}</p>
+          ${!allReturn ? `<p><b>Payment Amount:</b> ${paidAmount.toFixed(2)}</p>` : ''}
           ${discountAmount > 0 ? `<p><b>Discount:</b> ${discountAmount.toFixed(2)}</p>` : ''}
-          <p><b>Due:</b> ${adjustedTotal.toFixed(2)}</p>
+          ${!allReturn ? `<p><b>Due:</b> ${adjustedTotal.toFixed(2)}</p>` : ''}
           <p>Date: ${new Date().toLocaleString()}</p>
         </div>
       </div>
@@ -224,6 +228,7 @@ function BillingPage() {
   };
 
   const handleDownloadHTML = () => {
+    const allReturn = lastBillData.transactions.every(t => t.transactionType === 'return');
     const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>Bill</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
@@ -242,21 +247,21 @@ function BillingPage() {
         <div class='watermark'>JHARKHAND STEEL</div>
         <div class='bill-content'>
           <h2>Bill</h2>
-          <div class='bill-header'><b>Name:</b> ${lastBill.customer.name} &nbsp;&nbsp; <b>Contact:</b> ${lastBill.customer.contact}</div>
+          <div class='bill-header'><b>Name:</b> ${lastBillData.customer.name} &nbsp;&nbsp; <b>Contact:</b> ${lastBillData.customer.contact}</div>
           <div class='bill-header'><b>Date:</b> ${new Date().toLocaleString()}</div>
           <table>
             <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Type</th></tr></thead>
             <tbody>
-              ${lastBill.transactions.map((t, i) => {
+              ${lastBillData.transactions.map((t, i) => {
                 const prod = products.find(p => p.id == t.productId);
                 return `<tr><td>${i + 1}</td><td>${prod ? prod.name : ''}</td><td>${t.quantity}</td><td>${t.transactionPrice}</td><td>${t.totalPrice}</td><td>${t.transactionType}</td></tr>`;
               }).join('')}
             </tbody>
           </table>
           <br>
-          <div class='bill-header'><b>Payment Amount:</b> ${lastBill.paidAmount.toFixed(2)}</div>
-          ${lastBill.discountAmount > 0 ? `<div class='bill-header'><b>Discount:</b> ${lastBill.discountAmount.toFixed(2)}</div>` : ''}
-          <div class='bill-footer'>Due: ${lastBill.total.toFixed(2)}</div>
+          ${!allReturn ? `<div class='bill-header'><b>Payment Amount:</b> ${lastBillData.paidAmount.toFixed(2)}</div>` : ''}
+          ${lastBillData.discountAmount > 0 ? `<div class='bill-header'><b>Discount:</b> ${lastBillData.discountAmount.toFixed(2)}</div>` : ''}
+          ${!allReturn ? `<div class='bill-footer'>Due: ${lastBillData.total.toFixed(2)}</div>` : ''}
         </div>
       </div>
     </body></html>`;
@@ -269,7 +274,7 @@ function BillingPage() {
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const yyyy = today.getFullYear();
     const formattedDate = `${dd}_${mm}_${yyyy}`;
-    a.download = `bill_${lastBill.customer.name}_${formattedDate}.html`;
+    a.download = `bill_${lastBillData.customer.name}_${formattedDate}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -378,14 +383,14 @@ function BillingPage() {
                   <TextField name="transactionPrice" value={t.transactionPrice} onChange={e => handleTxnChange(idx, 'transactionPrice', e.target.value)} size="small" type="number" sx={{ minWidth: 120 }} />
                 </TableCell>
                 <TableCell>
-                  <TextField name="amountPaid" value={t.amountPaid} onChange={e => handleTxnChange(idx, 'amountPaid', e.target.value)} size="small" type="number" sx={{ minWidth: 100 }} />
+                  <TextField name="amountPaid" value={t.amountPaid} onChange={e => handleTxnChange(idx, 'amountPaid', e.target.value)} size="small" type="number" sx={{ minWidth: 100 }} disabled={t.transactionType === 'return'} />
                 </TableCell>
                 <TableCell>
                   <TextField name="totalPrice" value={t.totalPrice} size="small" type="number" disabled sx={{ minWidth: 120 }} />
                 </TableCell>
                 <TableCell>
                   <Select name="transactionType" value={t.transactionType} onChange={e => handleTxnChange(idx, 'transactionType', e.target.value)} size="small" sx={{ minWidth: 100 }}>
-                    <MenuItem value="buy">Buy</MenuItem>
+                    <MenuItem value="return">Return</MenuItem>
                     <MenuItem value="sell">Sell</MenuItem>
                   </Select>
                 </TableCell>
@@ -419,10 +424,10 @@ function BillingPage() {
             startIcon={<WhatsAppIcon />}
             sx={{ mt: 1 }}
             onClick={() => {
-              const message = `Your total bill at Jharkhand Steel on ${new Date().toLocaleDateString()} is ₹${lastBill.grossTotal.toFixed(2)}. Due amount is ₹${lastBill.total.toFixed(2)}.${lastBill.total === 0 ? ' Fully paid.' : ''} Bill is attached.`;
-              window.open(`https://wa.me/${lastBill.customer.contact}?text=${encodeURIComponent(message)}`, '_blank');
+              const message = `Your total bill at Jharkhand Steel on ${new Date().toLocaleDateString()} is ₹${lastBillData.grossTotal.toFixed(2)}. Due amount is ₹${lastBillData.total.toFixed(2)}.${lastBillData.total === 0 ? ' Fully paid.' : ''} Bill is attached.`;
+              window.open(`https://wa.me/${lastBillData.customer.contact}?text=${encodeURIComponent(message)}`, '_blank');
             }}
-            disabled={!lastBill.customer.contact}
+            disabled={!lastBillData.customer.contact}
           >
             WhatsApp
           </Button>
@@ -434,3 +439,4 @@ function BillingPage() {
 }
 
 export default BillingPage;
+

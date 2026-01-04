@@ -21,7 +21,7 @@ function TransactionsPage() {
     quantity: '',
     transactionPrice: '',
     amountPaid: '',
-    transactionType: 'buy',
+    transactionType: 'return',
     personName: '',
     contact: '',
   });
@@ -107,7 +107,7 @@ function TransactionsPage() {
       return;
     }
     // Calculate actual price (from product cp/sp)
-    const actualPrice = form.transactionType === 'buy' ? product.costPrice : product.sellPrice;
+    const actualPrice = form.transactionType === 'return' ? product.costPrice : product.sellPrice;
     const totalPrice = parseFloat(form.transactionPrice) * parseFloat(form.quantity);
     try {
       await addTransaction({
@@ -121,7 +121,7 @@ function TransactionsPage() {
         person_name: form.personName,
         contact: form.contact,
       });
-      setForm({ productId: '', quantity: '', transactionPrice: '', amountPaid: '', transactionType: 'buy', personName: '', contact: '' });
+      setForm({ productId: '', quantity: '', transactionPrice: '', amountPaid: '', transactionType: 'return', personName: '', contact: '' });
       setOpen(false);
       fetchData();
       setSnackbar({ open: true, message: 'Transaction added.' });
@@ -280,7 +280,7 @@ function TransactionsPage() {
             >
             <Grid item xs={12} sm={6}>
               <Select fullWidth value={form.transactionType} onChange={e => setForm(f => ({ ...f, transactionType: e.target.value }))} sx={{ mt: 1 }}>
-                <MenuItem value="buy">Buy</MenuItem>
+                <MenuItem value="return">Return</MenuItem>
                 <MenuItem value="sell">Sell</MenuItem>
               </Select>
             </Grid>
@@ -295,7 +295,7 @@ function TransactionsPage() {
                     const product = newValue;
                     let actualPrice = '';
                     if (product && form.transactionType) {
-                      actualPrice = form.transactionType === 'buy' ? product.costPrice : product.sellPrice;
+                      actualPrice = form.transactionType === 'return' ? product.sellPrice : product.sellPrice;
                     }
                     return {
                       ...f,
@@ -322,7 +322,7 @@ function TransactionsPage() {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Amount Paid" type="number" fullWidth margin="dense" value={form.amountPaid} onChange={e => setForm(f => ({ ...f, amountPaid: e.target.value }))} />
+              <TextField label="Amount Paid" type="number" fullWidth margin="dense" value={form.amountPaid} onChange={e => setForm(f => ({ ...f, amountPaid: e.target.value }))} disabled={form.transactionType === 'return'} />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField label="Buyer/Seller Name" fullWidth margin="dense" value={form.personName} onChange={e => setForm(f => ({ ...f, personName: e.target.value }))} />
