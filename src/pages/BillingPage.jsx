@@ -46,11 +46,25 @@ function BillingPage() {
   const [lastSubmissionTime, setLastSubmissionTime] = useState(0);
   const [paymentAmount, setPaymentAmount] = useState('0');
   const [discountAmount, setDiscountAmount] = useState('0');
+  const [discountPercent, setDiscountPercent] = useState(0);
 
   useEffect(() => {
     getProducts().then(setProducts).catch(e => setSnackbar({ open: true, message: e.message }));
     getUniqueCustomers().then(setCustomers).catch(() => {});
   }, []);
+
+  const calculateTotalProfit = () => {
+    return transactions.reduce((sum, t) => {
+      const profit = (parseFloat(t.transactionPrice || 0) - parseFloat(t.costPrice || 0)) * parseFloat(t.quantity || 0);
+      return t.transactionType === 'return' ? sum - profit : sum + profit;
+    }, 0);
+  };
+
+  useEffect(() => {
+    const totalProfit = calculateTotalProfit();
+    const discount = (discountPercent / 100) * totalProfit;
+    setDiscountAmount(discount.toFixed(2));
+  }, [discountPercent, transactions]);
 
 
 
@@ -171,13 +185,13 @@ function BillingPage() {
         });
       }
       // Add ledger adjustment if discount amount is provided
-      if (parseFloat(discountAmount) > 0) {
+      if (parseFloat(discountAmount) !== 0) {
         await addLedgerAdjustment({
           person_name: customer.name,
           contact: customer.contact,
           adjustment_amount: parseFloat(discountAmount),
           adjustment_date: new Date().toISOString(),
-          reason: 'Discount',
+          reason: parseFloat(discountAmount) > 0 ? 'Discount' : 'Discount adjustment',
         });
       }
       // Store the bill data before clearing inputs
@@ -190,6 +204,7 @@ function BillingPage() {
       setTransactions([{ productId: '', quantity: '', actualPrice: '', transactionPrice: '', totalPrice: '', amountPaid: 0, transactionType: 'sell', costPrice: '' }]);
       setPaymentAmount('');
       setDiscountAmount('');
+      setDiscountPercent(0);
       setBillGenerated(true);
       setBillHtml(generateBillHtml(customer, transactions, total, parseFloat(paymentAmount) || 0, parseFloat(discountAmount) || 0));
       setSnackbar({ open: true, message: 'Bill generated and saved!' });
@@ -470,6 +485,21 @@ function BillingPage() {
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, mt: 2 }}>
         <Typography variant="h6">Total: {total.toFixed(2)}</Typography>
         <TextField label="Payment Amount" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} type="number" sx={{ width: '250px' }} />
+        <Select
+          value={discountPercent}
+          onChange={e => setDiscountPercent(parseInt(e.target.value))}
+          displayEmpty
+          sx={{ width: '150px' }}
+        >
+          <MenuItem value={0}>0%</MenuItem>
+          <MenuItem value={5}>5%</MenuItem>
+          <MenuItem value={10}>10%</MenuItem>
+          <MenuItem value={15}>15%</MenuItem>
+          <MenuItem value={17}>17%</MenuItem>
+          <MenuItem value={20}>20%</MenuItem>
+          <MenuItem value={22}>22%</MenuItem>
+          <MenuItem value={25}>25%</MenuItem>
+        </Select>
         <TextField label="Discount Amount" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} type="number" sx={{ width: '250px' }} />
         <Typography variant="h6">Due: {adjustedTotal.toFixed(2)}</Typography>
       </Box>
