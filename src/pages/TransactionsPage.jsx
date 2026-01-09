@@ -9,6 +9,7 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ReplayIcon from '@mui/icons-material/Replay';
+import CloseIcon from '@mui/icons-material/Close';
 
 function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
@@ -309,7 +310,17 @@ function TransactionsPage() {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Quantity" type="number" fullWidth margin="dense" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
+              <TextField label="Quantity" type="number" fullWidth margin="dense" value={form.quantity} onChange={e => {
+                const value = e.target.value;
+                if (form.transactionType === 'sell' && value) {
+                  const product = products.find(p => p.id === parseInt(form.productId));
+                  if (product && parseFloat(value) > product.stock) {
+                    setSnackbar({ open: true, message: `Insufficient stock for product ${product.name}. Available: ${product.stock}, requested: ${value}` });
+                    return;
+                  }
+                }
+                setForm(f => ({ ...f, quantity: value }));
+              }} />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -357,7 +368,7 @@ function TransactionsPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={snackbar.open} autoHideDuration={2000} onClose={() => setSnackbar({ open: false, message: '' })} message={snackbar.message} />
+      <Snackbar open={snackbar.open} onClose={() => setSnackbar({ open: false, message: '' })} message={snackbar.message} action={<IconButton size="small" aria-label="close" color="inherit" onClick={() => setSnackbar({ open: false, message: '' })}><CloseIcon fontSize="small" /></IconButton>} />
     </Box>
     </LocalizationProvider>
   );

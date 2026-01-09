@@ -3,6 +3,7 @@ import { getProducts, addTransaction, getUniqueCustomers, addLedgerAdjustment } 
 import { Box, Button, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Grid, Snackbar, Select, MenuItem, Autocomplete } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import CloseIcon from '@mui/icons-material/Close';
 
 function BillingPage() {
   const toRoman = (num) => {
@@ -38,7 +39,16 @@ function BillingPage() {
   ]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+  const [snackbarQueue, setSnackbarQueue] = useState([]);
+
+  const addSnackbar = (message) => {
+    setSnackbarQueue(prev => [message, ...prev]);
+  };
+
+  const removeSnackbar = () => {
+    setSnackbarQueue(prev => prev.slice(1));
+  };
+
   const [billGenerated, setBillGenerated] = useState(false);
   const [billHtml, setBillHtml] = useState('');
   const [lastBillData, setLastBillData] = useState({ customer: { name: '', contact: '' }, transactions: [], total: 0, grossTotal: 0, paidAmount: 0 });
@@ -49,7 +59,7 @@ function BillingPage() {
   const [discountPercent, setDiscountPercent] = useState(0);
 
   useEffect(() => {
-    getProducts().then(setProducts).catch(e => setSnackbar({ open: true, message: e.message }));
+    getProducts().then(setProducts).catch(e => addSnackbar(e.message));
     getUniqueCustomers().then(setCustomers).catch(() => {});
   }, []);
 
@@ -89,6 +99,14 @@ function BillingPage() {
     if (field === 'quantity' || field === 'transactionPrice') {
       newTxns[idx].totalPrice = (parseFloat(newTxns[idx].transactionPrice || 0) * parseFloat(newTxns[idx].quantity || 0)).toFixed(2);
     }
+    // Check for insufficient stock if type is 'sell' and quantity is set
+    if (field === 'quantity' && newTxns[idx].transactionType === 'sell' && value) {
+      const product = products.find(p => p.id === parseInt(newTxns[idx].productId));
+      if (product && parseFloat(value) > product.stock) {
+        addSnackbar(`Insufficient stock for product ${product.name}. Available: ${product.stock}, requested: ${value}`);
+        return; // Do not update transactions if insufficient stock
+      }
+    }
     setTransactions(newTxns);
   };
 
@@ -107,6 +125,8 @@ function BillingPage() {
   const adjustedTotal = total - parseFloat(paymentAmount || 0) - parseFloat(discountAmount || 0);
 
   const handleSaveAndGenerateBill = async () => {
+    const errors = [];
+
     // Check for duplicate submission within 2 minutes
     const currentTime = new Date().getTime();
     const payload = { customer, transactions };
@@ -114,51 +134,72 @@ function BillingPage() {
     const payloadHash = btoa(payloadString); // Simple hash using base64
 
     if (lastPayloadHash === payloadHash && (currentTime - lastSubmissionTime) < 120000) { // 2 minutes = 120000 ms
-      setSnackbar({ open: true, message: 'Duplicate submission detected. Please wait before submitting again.' });
-      return;
+      errors.push('Duplicate submission detected. Please wait before submitting again.');
     }
 
-    if (!customer.name.trim() || !customer.contact.trim()) {
-      setSnackbar({ open: true, message: 'Customer name and contact cannot be empty.' });
-      return;
+    // Validate customer details
+    if (!customer.name.trim()) {
+      errors.push('Customer name cannot be empty.');
     }
-    for (const t of transactions) {
-      if (!t.productId || !t.quantity || !t.transactionPrice || t.amountPaid === undefined || !t.transactionType) {
-        setSnackbar({ open: true, message: 'All transaction fields required.' });
-        return;
+    if (!customer.contact.trim()) {
+      errors.push('Customer contact cannot be empty.');
+    }
+
+    // Validate transactions
+    transactions.forEach((t, idx) => {
+      if (!t.productId) {
+        errors.push(`Transaction ${idx + 1}: Product is required.`);
       }
-    }
+      if (!t.quantity || parseFloat(t.quantity) <= 0) {
+        errors.push(`Transaction ${idx + 1}: Quantity must be greater than 0.`);
+      }
+      if (!t.transactionPrice || parseFloat(t.transactionPrice) <= 0) {
+        errors.push(`Transaction ${idx + 1}: Transaction price must be greater than 0.`);
+      }
+      if (t.amountPaid === undefined || t.amountPaid === '') {
+        errors.push(`Transaction ${idx + 1}: Amount paid is required.`);
+      }
+      if (!t.transactionType) {
+        errors.push(`Transaction ${idx + 1}: Transaction type is required.`);
+      }
+    });
 
     // Refresh products to get latest stock
+    let updatedProducts;
     try {
-      const updatedProducts = await getProducts();
+      updatedProducts = await getProducts();
       setProducts(updatedProducts);
     } catch (e) {
-      setSnackbar({ open: true, message: 'Failed to refresh product stock: ' + e.message });
-      return;
+      errors.push('Failed to refresh product stock: ' + e.message);
     }
 
     // Validate aggregated sell quantities against product stock
-    const sellTotalsByProduct = {};
-    for (const t of transactions) {
-      if (t.transactionType === 'sell') {
-        const pid = parseInt(t.productId);
-        sellTotalsByProduct[pid] = (sellTotalsByProduct[pid] || 0) + parseFloat(t.quantity);
-      }
-    }
-    for (const pidStr of Object.keys(sellTotalsByProduct)) {
-      const pid = parseInt(pidStr);
-      const prod = products.find(p => p.id === pid);
-      if (!prod) {
-        setSnackbar({ open: true, message: `Product not found for id ${pid}` });
-        return;
-      }
-      if (prod.stock < sellTotalsByProduct[pid]) {
-        setSnackbar({ open: true, message: `Insufficient stock for product ${prod.name}. Available: ${prod.stock}, requested: ${sellTotalsByProduct[pid]}` });
-        return;
+    if (updatedProducts) {
+      const sellTotalsByProduct = {};
+      transactions.forEach((t, idx) => {
+        if (t.transactionType === 'sell' && t.productId && t.quantity) {
+          const pid = parseInt(t.productId);
+          sellTotalsByProduct[pid] = (sellTotalsByProduct[pid] || 0) + parseFloat(t.quantity);
+        }
+      });
+      for (const pidStr of Object.keys(sellTotalsByProduct)) {
+        const pid = parseInt(pidStr);
+        const prod = updatedProducts.find(p => p.id === pid);
+        if (!prod) {
+          errors.push(`Product not found for id ${pid}`);
+        } else if (prod.stock < sellTotalsByProduct[pid]) {
+          errors.push(`Insufficient stock for product ${prod.name}. Available: ${prod.stock}, requested: ${sellTotalsByProduct[pid]}`);
+        }
       }
     }
 
+    // If there are any errors, show them and do not proceed
+    if (errors.length > 0) {
+      errors.forEach(error => addSnackbar(error));
+      return;
+    }
+
+    // Proceed to save if no errors
     try {
       for (const t of transactions) {
         await addTransaction({
@@ -207,9 +248,9 @@ function BillingPage() {
       setDiscountPercent(0);
       setBillGenerated(true);
       setBillHtml(generateBillHtml(customer, transactions, total, parseFloat(paymentAmount) || 0, parseFloat(discountAmount) || 0));
-      setSnackbar({ open: true, message: 'Bill generated and saved!' });
+      addSnackbar('Bill generated and saved!');
     } catch (e) {
-      setSnackbar({ open: true, message: e.message });
+      addSnackbar(e.message);
     }
   };
 
@@ -524,7 +565,16 @@ function BillingPage() {
           </Button>
         </Box>
       )}
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} message={snackbar.message} />
+      {snackbarQueue.length > 0 && (
+        <Snackbar
+          open={true}
+          message={snackbarQueue[0]}
+          autoHideDuration={null}
+          disableWindowBlurListener
+          disableClickAwayListener
+          action={<IconButton size="small" aria-label="close" color="inherit" onClick={removeSnackbar}><CloseIcon fontSize="small" /></IconButton>}
+        />
+      )}
     </Box>
   );
 }
