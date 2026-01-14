@@ -148,11 +148,18 @@ function LedgerPage() {
         return acc;
       }, {});
       const content = Object.keys(grouped).sort().map(date => {
-        const tableRows = grouped[date].map(txn => {
+        const txns = grouped[date];
+        const sumTotalPrice = txns.reduce((sum, txn) => {
+          const price = txn.totalPrice || txn.total_price || 0;
+          const type = txn.transactionType || txn.transaction_type;
+          if (type === 'return') return sum - price;
+          return sum + price;
+        }, 0);
+        const tableRows = txns.map(txn => {
           const prod = products.find(p => p.id == txn.product_id);
           return `<tr><td style="width: 45%; word-wrap: break-word;">${prod ? prod.name : 'Unknown'}</td><td>${txn.quantity}</td><td>${txn.totalPrice || txn.total_price}</td><td>${txn.transactionType || txn.transaction_type}</td></tr>`;
         }).join('');
-        return `<div><strong>${date}:</strong></div><table style="width: 100%; border-collapse: collapse;">${tableRows}</table>`;
+        return `<div><strong>${date} (Total: ₹${sumTotalPrice.toFixed(2)}):</strong></div><table style="width: 100%; border-collapse: collapse;">${tableRows}</table>`;
       }).join('<br>');
       const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>Transactions</title>
         <style>
