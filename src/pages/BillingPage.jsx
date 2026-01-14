@@ -374,6 +374,7 @@ function BillingPage() {
         </tbody>
       </table>
       <br>
+      ${!allReturn ? `<div class='left item'>Total: ${lastBillData.grossTotal.toFixed(2)}</div>` : ''}
       ${!allReturn ? `<div class='left item'>Paid: ${lastBillData.paidAmount.toFixed(2)}</div>` : ''}
       ${lastBillData.discountAmount > 0 ? `<div class='left item'>Disc: ${lastBillData.discountAmount.toFixed(2)}</div>` : ''}
       ${!allReturn ? `<div class='right item'>Due: ${lastBillData.total.toFixed(2)}</div>` : ''}

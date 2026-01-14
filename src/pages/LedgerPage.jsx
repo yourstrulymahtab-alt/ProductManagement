@@ -107,7 +107,7 @@ function LedgerPage() {
       }).join('\n\n');
     const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>Adjustments</title>
       <style>
-        body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 185px; white-space: pre-wrap; }
+        body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 180px; white-space: pre-wrap; }
         .center { text-align: center; }
         .header { font-weight: bold; }
       </style>
@@ -163,7 +163,7 @@ function LedgerPage() {
       }).join('<br>');
       const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>Transactions</title>
         <style>
-          body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 185px; white-space: pre-wrap; }
+          body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 180px; white-space: pre-wrap; }
           .center { text-align: center; }
           .header { font-weight: bold; }
         </style>
