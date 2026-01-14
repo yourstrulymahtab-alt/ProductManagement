@@ -105,15 +105,15 @@ function LedgerPage() {
         const items = grouped[date].map(adj => `${adj.adjustment_amount} "${adj.reason}"`).join('\n');
         return `${date}:\n${items}`;
       }).join('\n\n');
-      const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>Adjustments</title>
-        <style>
-          body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 200px; white-space: pre-wrap; }
-          .center { text-align: center; }
-          .header { font-weight: bold; }
-        </style>
-      </head><body>
-        <div class='center header'>JHARKHAND STEEL</div>
-        <div class='center header'>ADJUSTMENT HISTORY</div>
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>Adjustments</title>
+      <style>
+        body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 185px; white-space: pre-wrap; }
+        .center { text-align: center; }
+        .header { font-weight: bold; }
+      </style>
+    </head><body>
+      <div class='center header'>JHARKHAND STEEL</div>
+      <div class='center header'>ADJUSTMENT HISTORY</div>
         <br>
         <div>Name: ${person}</div>
         <div>Contact: ${contact}</div>
@@ -156,7 +156,7 @@ function LedgerPage() {
       }).join('<br>');
       const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>Transactions</title>
         <style>
-          body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 200px; white-space: pre-wrap; }
+          body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 185px; white-space: pre-wrap; }
           .center { text-align: center; }
           .header { font-weight: bold; }
         </style>

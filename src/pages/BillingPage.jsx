@@ -337,9 +337,9 @@ function BillingPage() {
 
   const handleDownload57mm = () => {
     const allReturn = lastBillData.transactions.every(t => t.transactionType === 'return');
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>57mm Bill</title>
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>54mm Bill</title>
       <style>
-        body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 200px; word-wrap: break-word; overflow-wrap: break-word; }
+        body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 185px; word-wrap: break-word; overflow-wrap: break-word; }
         .center { text-align: center; }
         .left { text-align: left; }
         .right { text-align: right; }
@@ -390,7 +390,7 @@ function BillingPage() {
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const yyyy = today.getFullYear();
     const formattedDate = `${dd}_${mm}_${yyyy}`;
-    a.download = `bill_57mm_${lastBillData.customer.name}_${formattedDate}.html`;
+    a.download = `bill_54mm_${lastBillData.customer.name}_${formattedDate}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -550,7 +550,7 @@ function BillingPage() {
           <Typography variant="h6">Bill Preview</Typography>
           <div dangerouslySetInnerHTML={{ __html: billHtml }} />
           <Button variant="outlined" sx={{ mt: 1, mr: 2 }} onClick={handleDownloadHTML}>Download Bill</Button>
-          <Button variant="outlined" sx={{ mt: 1, mr: 2 }} onClick={handleDownload57mm}>Download 57mm Bill</Button>
+          <Button variant="outlined" sx={{ mt: 1, mr: 2 }} onClick={handleDownload57mm}>Download 54mm Bill</Button>
           <Button
             variant="outlined"
             startIcon={<WhatsAppIcon />}
