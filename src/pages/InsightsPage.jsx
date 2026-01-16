@@ -42,9 +42,9 @@ function InsightsPage() {
   const fetchData = async () => {
     try {
       setProducts(await getProducts());
-      // Only use last 50 transactions for analysis
+      // Fetch all transactions for comprehensive analysis including date filters
       const txns = await getTransactions();
-      setTransactions(txns.slice(0, 50));
+      setTransactions(txns);
     } catch {
       // Optionally show error
     }
