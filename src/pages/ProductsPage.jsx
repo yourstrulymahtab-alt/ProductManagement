@@ -1,11 +1,10 @@
 // ...existing code...
 
 import React, { useEffect, useState } from 'react';
-import { getProducts, addProduct, deleteProduct } from '../api/supabaseApi';
+import { getProducts, addProduct } from '../api/supabaseApi';
 import { PRODUCT_SALES_TYPE } from '../api/productModel';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Snackbar, Grid, useMediaQuery, Autocomplete } from '@mui/material';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Snackbar, Grid, useMediaQuery, Autocomplete } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -25,7 +24,6 @@ function ProductsPage() {
   const [addStockId, setAddStockId] = useState(null);
   const [addStockForm, setAddStockForm] = useState({ quantity: '' });
   const [confirmEdit, setConfirmEdit] = useState({ open: false, product: null });
-  const [confirmDelete, setConfirmDelete] = useState({ open: false, id: null });
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -86,16 +84,6 @@ function ProductsPage() {
       setEditId(null);
       setOpen(false);
       fetchProducts();
-    } catch (e) {
-      setSnackbar({ open: true, message: e.message });
-    }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      await deleteProduct(id);
-      fetchProducts();
-      setSnackbar({ open: true, message: 'Product deleted.' });
     } catch (e) {
       setSnackbar({ open: true, message: e.message });
     }
@@ -181,7 +169,6 @@ function ProductsPage() {
                     setAddStockId(p.id);
                     setAddStockForm({ quantity: '' });
                   }}>Add Stock</Button>
-                  <IconButton onClick={() => handleDelete(p.id)} size={isMobile ? 'small' : 'medium'} color="error"><DeleteIcon /></IconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -271,21 +258,6 @@ function ProductsPage() {
               setConfirmEdit({ open: false, product: null });
             }
           }} variant="contained">Yes, Edit</Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog open={confirmDelete.open} onClose={() => setConfirmDelete({ open: false, id: null })}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to delete this product? This action cannot be undone.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDelete({ open: false, id: null })} color="secondary">Cancel</Button>
-          <Button onClick={() => {
-            if (confirmDelete.id) {
-              handleDelete(confirmDelete.id);
-              setConfirmDelete({ open: false, id: null });
-            }
-          }} variant="contained" color="error">Yes, Delete</Button>
         </DialogActions>
       </Dialog>
       <Snackbar open={snackbar.open} autoHideDuration={2000} onClose={() => setSnackbar({ open: false, message: '' })} message={snackbar.message} />

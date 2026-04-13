@@ -339,7 +339,7 @@ function BillingPage() {
     const allReturn = lastBillData.transactions.every(t => t.transactionType === 'return');
     const htmlContent = `<!DOCTYPE html><html><head><meta charset='utf-8'><title>54mm Bill</title>
       <style>
-        body { font-family: monospace; font-size: 10px; margin: 0; padding: 5px; width: 185px; word-wrap: break-word; overflow-wrap: break-word; }
+        body { font-family: 'Courier New', monospace; font-size: 10px; margin: 0; padding: 5px; width: 185px; word-wrap: break-word; overflow-wrap: break-word; }
         .center { text-align: center; }
         .left { text-align: left; }
         .right { text-align: right; }
@@ -348,9 +348,10 @@ function BillingPage() {
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 2px 0; vertical-align: top; }
         .num { width: 10%; text-align: center; }
-        .prod { width: 45%; word-wrap: break-word; overflow-wrap: break-word; }
-        .qty { width: 15%; text-align: center; }
-        .total { width: 20%; text-align: right; }
+        .prod { width: 35%; word-wrap: break-word; overflow-wrap: break-word; }
+        .qty { width: 12%; text-align: center; }
+        .rate { width: 15%; text-align: right; }
+        .total { width: 15%; text-align: right; }
         .type { width: 10%; text-align: center; }
       </style>
     </head><body>
@@ -363,13 +364,13 @@ function BillingPage() {
       <br>
       <table>
         <thead>
-          <tr><th class='center'>#</th><th class='left'>Prod</th><th class='center'>Qty</th><th class='right'>Total</th><th class='center'>Type</th></tr>
+          <tr><th class='center'>#</th><th class='left'>Prod</th><th class='center'>Qty</th><th class='right'>Rate</th><th class='right'>Total</th><th class='center'>Type</th></tr>
         </thead>
         <tbody>
           ${lastBillData.transactions.map((t, i) => {
             const prod = products.find(p => p.id == t.productId);
             const prodName = prod ? prod.name : '';
-            return `<tr><td class='center'>${i + 1}</td><td class='prod'>${prodName}</td><td class='qty'>${t.quantity}</td><td class='total'>${t.totalPrice}</td><td class='center'>${t.transactionType.substring(0, 4)}</td></tr>`;
+            return `<tr><td class='center'>${i + 1}</td><td class='prod'>${prodName}</td><td class='qty'>${t.quantity}</td><td class='rate'>${t.transactionPrice}</td><td class='total'>${t.totalPrice}</td><td class='center'>${t.transactionType === 'sell' ? 'S' : 'R'}</td></tr>`;
           }).join('')}
         </tbody>
       </table>
