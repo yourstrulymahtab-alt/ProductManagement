@@ -73,7 +73,7 @@ function BillingPage() {
   useEffect(() => {
     const totalProfit = calculateTotalProfit();
     const discount = (discountPercent / 100) * totalProfit;
-    setDiscountAmount(discount.toFixed(2));
+    setDiscountAmount(Math.floor(discount));
   }, [discountPercent, transactions]);
 
 
@@ -97,7 +97,7 @@ function BillingPage() {
     }
     // If quantity or transactionPrice changes, update totalPrice
     if (field === 'quantity' || field === 'transactionPrice') {
-      newTxns[idx].totalPrice = (parseFloat(newTxns[idx].transactionPrice || 0) * parseFloat(newTxns[idx].quantity || 0)).toFixed(2);
+      newTxns[idx].totalPrice = Math.floor(parseFloat(newTxns[idx].transactionPrice || 0) * parseFloat(newTxns[idx].quantity || 0));
     }
     // Check for insufficient stock if type is 'sell' and quantity is set
     if (field === 'quantity' && newTxns[idx].transactionType === 'sell' && value) {
@@ -274,9 +274,9 @@ function BillingPage() {
             <tbody>${rows}</tbody>
           </table>
           <br>
-          ${!allReturn ? `<p><b>Payment Amount:</b> ${paidAmount.toFixed(2)}</p>` : ''}
-          ${discountAmount > 0 ? `<p><b>Discount:</b> ${discountAmount.toFixed(2)}</p>` : ''}
-          ${!allReturn ? `<p><b>Due:</b> ${adjustedTotal.toFixed(2)}</p>` : ''}
+          ${!allReturn ? `<p><b>Payment Amount:</b> ${Math.floor(paidAmount)}</p>` : ''}
+          ${discountAmount > 0 ? `<p><b>Discount:</b> ${Math.floor(discountAmount)}</p>` : ''}
+          ${!allReturn ? `<p><b>Due:</b> ${Math.floor(adjustedTotal)}</p>` : ''}
           <p>Date: ${new Date().toLocaleString()}</p>
         </div>
       </div>
@@ -315,9 +315,9 @@ function BillingPage() {
             </tbody>
           </table>
           <br>
-          ${!allReturn ? `<div class='bill-header'><b>Payment Amount:</b> ${lastBillData.paidAmount.toFixed(2)}</div>` : ''}
-          ${lastBillData.discountAmount > 0 ? `<div class='bill-header'><b>Discount:</b> ${lastBillData.discountAmount.toFixed(2)}</div>` : ''}
-          ${!allReturn ? `<div class='bill-footer'>Due: ${lastBillData.total.toFixed(2)}</div>` : ''}
+          ${!allReturn ? `<div class='bill-header'><b>Payment Amount:</b> ${Math.floor(lastBillData.paidAmount)}</div>` : ''}
+          ${lastBillData.discountAmount > 0 ? `<div class='bill-header'><b>Discount:</b> ${Math.floor(lastBillData.discountAmount)}</div>` : ''}
+          ${!allReturn ? `<div class='bill-footer'>Due: ${Math.floor(lastBillData.total)}</div>` : ''}
         </div>
       </div>
     </body></html>`;
@@ -375,10 +375,10 @@ function BillingPage() {
         </tbody>
       </table>
       <br>
-      ${!allReturn ? `<div class='left item'>Total: ${lastBillData.grossTotal.toFixed(2)}</div>` : ''}
-      ${!allReturn ? `<div class='left item'>Paid: ${lastBillData.paidAmount.toFixed(2)}</div>` : ''}
-      ${lastBillData.discountAmount > 0 ? `<div class='left item'>Disc: ${lastBillData.discountAmount.toFixed(2)}</div>` : ''}
-      ${!allReturn ? `<div class='right item'>Due: ${lastBillData.total.toFixed(2)}</div>` : ''}
+      ${!allReturn ? `<div class='left item'>Total: ${Math.floor(lastBillData.grossTotal)}</div>` : ''}
+      ${!allReturn ? `<div class='left item'>Paid: ${Math.floor(lastBillData.paidAmount)}</div>` : ''}
+      ${lastBillData.discountAmount > 0 ? `<div class='left item'>Disc: ${Math.floor(lastBillData.discountAmount)}</div>` : ''}
+      ${!allReturn ? `<div class='right item'>Due: ${Math.floor(lastBillData.total)}</div>` : ''}
       <br>
       <div class='center'>Thank you!</div>
     </body></html>`;
@@ -526,7 +526,7 @@ function BillingPage() {
         </Table>
       </TableContainer>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, mt: 2 }}>
-        <Typography variant="h6">Total: {total.toFixed(2)}</Typography>
+        <Typography variant="h6">Total: {Math.floor(total)}</Typography>
         <TextField label="Payment Amount" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} type="number" sx={{ width: '250px' }} />
         <Select
           value={discountPercent}
@@ -544,7 +544,7 @@ function BillingPage() {
           <MenuItem value={25}>25%</MenuItem>
         </Select>
         <TextField label="Discount Amount" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} type="number" sx={{ width: '250px' }} />
-        <Typography variant="h6">Due: {adjustedTotal.toFixed(2)}</Typography>
+        <Typography variant="h6">Due: {Math.floor(adjustedTotal)}</Typography>
       </Box>
       <Button variant="contained" color="primary" sx={{ mt: 2 }} onClick={handleSaveAndGenerateBill}>Save & Generate Bill</Button>
       {billGenerated && (
@@ -558,7 +558,7 @@ function BillingPage() {
             startIcon={<WhatsAppIcon />}
             sx={{ mt: 1 }}
             onClick={() => {
-              const message = `Your total bill at Jharkhand Steel on ${new Date().toLocaleDateString()} is ₹${lastBillData.grossTotal.toFixed(2)}. Due amount is ₹${lastBillData.total.toFixed(2)}.${lastBillData.total === 0 ? ' Fully paid.' : ''} Bill is attached.`;
+              const message = `Your total bill at Jharkhand Steel on ${new Date().toLocaleDateString()} is ₹${Math.floor(lastBillData.grossTotal)}. Due amount is ₹${Math.floor(lastBillData.total)}.${lastBillData.total === 0 ? ' Fully paid.' : ''} Bill is attached.`;
               window.open(`https://wa.me/${lastBillData.customer.contact}?text=${encodeURIComponent(message)}`, '_blank');
             }}
             disabled={!lastBillData.customer.contact}
