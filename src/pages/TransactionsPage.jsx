@@ -151,6 +151,62 @@ function TransactionsPage() {
     }
   };
 
+  const handleDownloadCSV = async () => {
+    try {
+      const allTxns = await getTransactions();
+      
+      // Define CSV headers
+      const headers = ['ID', 'Product Name', 'Quantity', 'Actual Price', 'Transaction Price', 'Total Price', 'Amount Paid', 'Type', 'Date', 'Person', 'Contact', 'Reversed'];
+      
+      // Helper function to escape CSV values
+      const escapeCSV = (value) => {
+        if (value === null || value === undefined) return '';
+        value = value.toString();
+        if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      };
+      
+      // Create CSV rows
+      const rows = allTxns.map(t => [
+        t.id,
+        t.productName,
+        t.quantity,
+        t.actualPrice ?? t.actual_price ?? '',
+        t.transactionPrice ?? t.transaction_price ?? '',
+        t.totalPrice ?? t.total_price ?? '',
+        t.amountPaid ?? t.amount_paid ?? '',
+        (t.transactionType || t.transaction_type) + (t.reversed ? ' (reversed)' : ''),
+        convertToIST(t.transactionDate || t.transaction_date),
+        t.personName || t.person_name || '',
+        t.contact || '',
+        t.reversed ? 'Yes' : 'No'
+      ].map(escapeCSV));
+      
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+      
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setSnackbar({ open: true, message: `Downloaded ${allTxns.length} transactions.` });
+    } catch (e) {
+      setSnackbar({ open: true, message: e.message });
+    }
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ mx: 'auto', p: isMobile ? 1 : 3 }}>
@@ -159,7 +215,8 @@ function TransactionsPage() {
             <Typography variant={isMobile ? 'h6' : 'h5'} gutterBottom>Manage Transactions</Typography>
           </Grid>
           <Grid item xs={12} sm={6} textAlign={isMobile ? 'left' : 'right'}>
-            <Button variant="contained" onClick={() => setOpen(true)} size={isMobile ? 'small' : 'medium'}>Add Transaction</Button>
+            <Button variant="contained" onClick={() => setOpen(true)} size={isMobile ? 'small' : 'medium'} sx={{ mr: 1 }}>Add Transaction</Button>
+            <Button variant="outlined" onClick={handleDownloadCSV} size={isMobile ? 'small' : 'medium'}>Download CSV</Button>
           </Grid>
         </Grid>
         <Grid container spacing={2} sx={{ mb: 2 }} justifyContent="space-between">
