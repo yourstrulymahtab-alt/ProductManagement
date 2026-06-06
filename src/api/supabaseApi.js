@@ -62,14 +62,31 @@ export const deleteProduct = async (id) => {
 
 // TRANSACTIONS
 export const getTransactions = async () => {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('*, product:products(name)')
-    .order('id', { ascending: false });
-  if (error) throw error;
+  const pageSize = 1000;
+  let offset = 0;
+  let allData = [];
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*, product:products(name)')
+      .order('id', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw error;
+
+    allData = allData.concat(data || []);
+
+    // Stop when last page has fewer than pageSize rows
+    if (!data || data.length < pageSize) break;
+
+    offset += pageSize;
+  }
+
   // Attach product name for convenience
-  return data.map(t => ({ ...t, productName: t.product?.name || '', product: undefined }));
+  return allData.map(t => ({ ...t, productName: t.product?.name || '', product: undefined }));
 };
+
 
 export const addTransaction = async (txn) => {
   if (txn.id) {

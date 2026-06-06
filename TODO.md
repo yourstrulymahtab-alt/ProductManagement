@@ -1,4 +1,5 @@
-# TODO for Ledger Page Transaction Download Enhancement
+- [ ] Inspect CSV download flow and transaction fetch logic
+- [x] Update `getTransactions()` in `src/api/supabaseApi.js` to paginate and fetch all records for CSV export
+- [ ] Test: Download CSV and verify total record count
 
-- [x] Modify the `handleDownloadTransactions` function in `src/pages/LedgerPage.jsx` to calculate the sum of total prices for transactions on each date (adding for 'sell' and subtracting for 'return' types) and display it beside the date in the downloaded HTML (e.g., "Date (Total: ₹sum):").
-- [x] Test the download functionality to ensure the sum is correctly calculated and displayed. (Skipped as per user request)
+
