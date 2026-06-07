@@ -21,7 +21,11 @@ function LedgerPage() {
       const dayKey = (d) => {
         const dt = new Date(d);
         // Use local date formatting consistent with previous UI (YYYY-MM-DD)
+        // If transactionDate is already YYYY-MM-DD, keep it as-is
+        const asStr = d && typeof d === 'string' ? d : null;
+        if (asStr && /^\d{4}-\d{2}-\d{2}$/.test(asStr)) return asStr;
         return dt.toISOString().split('T')[0];
+
       };
 
       const map = {};
