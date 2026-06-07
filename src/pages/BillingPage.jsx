@@ -222,9 +222,12 @@ function BillingPage() {
           contact: customer.contact,
           adjustment_amount: parseFloat(paymentAmount),
           adjustment_date: new Date().toISOString(),
+          // day-wise ledger effective date (prevents NULL effective_date)
+          effective_date: new Date().toISOString().split('T')[0],
           reason: 'Paid while billing',
         });
       }
+
       // Add ledger adjustment if discount amount is provided
       if (parseFloat(discountAmount) !== 0) {
         await addLedgerAdjustment({
@@ -232,9 +235,12 @@ function BillingPage() {
           contact: customer.contact,
           adjustment_amount: parseFloat(discountAmount),
           adjustment_date: new Date().toISOString(),
+          // day-wise ledger effective date (prevents NULL effective_date)
+          effective_date: new Date().toISOString().split('T')[0],
           reason: parseFloat(discountAmount) > 0 ? 'Discount' : 'Discount adjustment',
         });
       }
+
       // Store the bill data before clearing inputs
       setLastBillData({ customer: customer, transactions: transactions, total: adjustedTotal, grossTotal: total, paidAmount: parseFloat(paymentAmount) || 0, discountAmount: parseFloat(discountAmount) || 0 });
       // Update duplicate prevention state

@@ -6,6 +6,8 @@ function LedgerPage() {
   const [ledger, setLedger] = useState([]);
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
+  const [adjustEffectiveDate, setAdjustEffectiveDate] = useState(() => new Date().toISOString().split('T')[0]);
+
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const [expandedPersons, setExpandedPersons] = useState({});
   const [personAdjustmentHistory, setPersonAdjustmentHistory] = useState({});
@@ -15,34 +17,110 @@ function LedgerPage() {
     try {
       const txns = await getTransactions();
       const filteredTxns = txns.filter(t => !t.reversed);
-      // Group by person+contact
+      // Group transactions by person+contact+transactionDay
+      const dayKey = (d) => {
+        const dt = new Date(d);
+        // Use local date formatting consistent with previous UI (YYYY-MM-DD)
+        return dt.toISOString().split('T')[0];
+      };
+
       const map = {};
+      // map[person|contact] => { person, contact, days: { [date]: { txns: [], txnNet: number, adjNet: number } }, orderedDates: [] }
       filteredTxns.forEach(t => {
-        const key = `${t.personName || t.person_name}|${t.contact}`;
-        if (!map[key]) map[key] = { person: t.personName || t.person_name, contact: t.contact, totalToTake: 0, totalToGive: 0, transactions: [] };
+        const person = t.personName || t.person_name;
+        const contact = t.contact;
+        const key = `${person}|${contact}`;
+        const txnDay = dayKey(t.transactionDate || t.transaction_date);
+
+        if (!map[key]) {
+          map[key] = { person, contact, days: {}, finalDue: 0, orderedDates: [] };
+        }
+        if (!map[key].days[txnDay]) {
+          map[key].days[txnDay] = { txns: [], txnNet: 0, adjNet: 0 };
+        }
         const txnType = t.transactionType || t.transaction_type;
-        const diff = txnType === 'return' ? (t.totalPrice ?? t.total_price ?? 0) - (t.amountPaid ?? t.amount_paid ?? 0) : (t.amountPaid ?? t.amount_paid ?? 0) - (t.totalPrice ?? t.total_price ?? 0);
-        if (diff < 0) map[key].totalToTake += Math.abs(diff);
-        else if (diff > 0) map[key].totalToGive += diff;
-        map[key].transactions.push(t);
+        const totalPrice = t.totalPrice ?? t.total_price ?? 0;
+        const amountPaid = t.amountPaid ?? t.amount_paid ?? 0;
+
+        // Keep the existing ledger meaning but convert to a signed daily net.
+        // In old code:
+        // - return: diff = totalPrice - amountPaid
+        // - sell:   diff = amountPaid - totalPrice
+        // diff<0 => totalToTake += abs(diff)
+        // diff>0 => totalToGive += diff
+        // So signedNet = totalToGive - totalToTake = diff (as-is)
+        const signedDiff = txnType === 'return' ? (totalPrice - amountPaid) : (amountPaid - totalPrice);
+        map[key].days[txnDay].txnNet += signedDiff;
+        map[key].days[txnDay].txns.push(t);
       });
-      // Apply adjustments to totals
-      for (const key in map) {
-        const [person, contact] = key.split('|');
+
+      // Apply adjustments day-wise and compute running due
+      for (const key of Object.keys(map)) {
+        const { person, contact, days } = map[key];
+        let adjustments = [];
         try {
-          const adjustments = await getLedgerAdjustments(person, contact);
-          const adjustmentSum = adjustments.reduce((sum, adj) => sum + adj.adjustment_amount, 0);
-          const net = map[key].totalToTake - map[key].totalToGive - adjustmentSum;
-          map[key].totalToTake = Math.max(net, 0);
-          map[key].totalToGive = Math.max(-net, 0);
+          adjustments = await getLedgerAdjustments(person, contact);
         } catch (e) {
-          // Ignore if ledger_adjustments table doesn't exist yet
           console.warn('Ledger adjustments not available:', e.message);
         }
+
+        const adjByDay = {};
+        adjustments.forEach(adj => {
+          const effDay = dayKey(adj.effective_date ?? adj.adjustment_date);
+          if (!adjByDay[effDay]) adjByDay[effDay] = 0;
+          // In old code, adjustment_amount was subtracted from (take-give)
+          // With signedNet = (give - take), the old due formula corresponds to: netAfterAdj = (take - give) - adjSum
+          // Equivalent signed representation: signedNetAfterAdj = signedNet - ( -adj )? To keep consistent with old behavior,
+          // treat adjustment_amount as reducing (take-give). Since signedNet = (give - take) = -(take-give),
+          // signedNetAfterAdj = signedNet + adjustment_amount.
+          adjByDay[effDay] += Number(adj.adjustment_amount || 0);
+        });
+
+        const orderedDates = Array.from(new Set(Object.keys(days).concat(Object.keys(adjByDay)))).sort();
+        map[key].orderedDates = orderedDates;
+
+        let signedRunningNet = 0; // signedNet = give - take
+        let take = 0;
+        let give = 0;
+
+        orderedDates.forEach(d => {
+          if (!days[d]) days[d] = { txns: [], txnNet: 0, adjNet: 0 };
+          const txnSigned = Number(days[d].txnNet || 0);
+          const adjSigned = Number(adjByDay[d] || 0);
+          days[d].adjNet = adjSigned;
+
+          signedRunningNet += txnSigned;
+          // apply adjustments on this day
+          signedRunningNet += adjSigned;
+
+          // convert signedRunningNet back to due display
+          // signedRunningNet = give - take
+          // => take = max(-signed,0), give = max(signed,0)
+          take = Math.max(-signedRunningNet, 0);
+          give = Math.max(signedRunningNet, 0);
+          days[d].dueTake = take;
+          days[d].dueGive = give;
+        });
+
+        // final due stored on entry
+        map[key].finalDue = take;
       }
-      const ledgerEntries = Object.values(map).filter(entry => entry.totalToTake >= 10);
+
+      // Build ledger entries for UI (show those with due >= 10 or have negative balance)
+      const ledgerEntries = Object.values(map)
+        .filter(entry => (entry.finalDue >= 10))
+        .map(entry => ({
+          person: entry.person,
+          contact: entry.contact,
+          days: entry.days,
+          orderedDates: entry.orderedDates,
+          totalToTake: entry.orderedDates.length ? entry.days[entry.orderedDates[entry.orderedDates.length - 1]].dueTake : 0,
+          totalToGive: entry.orderedDates.length ? entry.days[entry.orderedDates[entry.orderedDates.length - 1]].dueGive : 0,
+        }));
+
       ledgerEntries.sort((a, b) => Math.max(b.totalToTake, b.totalToGive) - Math.max(a.totalToTake, a.totalToGive));
       setLedger(ledgerEntries);
+
     } catch (e) {
       setSnackbar({ open: true, message: e.message });
     }
@@ -60,14 +138,16 @@ function LedgerPage() {
         setSnackbar({ open: true, message: 'Invalid adjustment amount.' });
         return;
       }
-      // Record adjustment
+      // Record adjustment (effective on selected date for day-wise ledger)
       await addLedgerAdjustment({
         person_name: person,
         contact: contact,
         adjustment_amount: adjustmentValue,
         adjustment_date: new Date().toISOString(),
+        effective_date: adjustEffectiveDate,
         reason: adjustReason || 'Manual adjustment'
       });
+
       setSnackbar({ open: true, message: 'Adjustment recorded.' });
       setAdjustAmount('');
       setAdjustReason('');
@@ -213,14 +293,29 @@ function LedgerPage() {
           <AccordionDetails>
             <Grid container spacing={2} sx={{ mt: 1, alignItems: 'center' }}>
               <Grid item>
-                <TextField size="small" type="number" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} placeholder="Enter adjustment" />
+                <TextField
+                  size="small"
+                  type="number"
+                  value={adjustAmount}
+                  onChange={e => setAdjustAmount(e.target.value)}
+                  placeholder="Enter adjustment"
+                />
               </Grid>
               <Grid item>
                 <TextField size="small" value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder="Reason" />
               </Grid>
               <Grid item>
+                <TextField
+                  size="small"
+                  type="date"
+                  value={adjustEffectiveDate}
+                  onChange={(e) => setAdjustEffectiveDate(e.target.value)}
+                />
+              </Grid>
+              <Grid item>
                 <Button size="small" onClick={() => handleAdjust(entry.person, entry.contact)}>Adjust Total</Button>
               </Grid>
+
               <Grid item>
                 <Button size="small" onClick={() => toggleExpansion(entry.person, entry.contact)}>
                   {expandedPersons[`${entry.person}|${entry.contact}`] ? 'Hide' : 'Show'} History
@@ -266,32 +361,51 @@ function LedgerPage() {
                 )}
               </Box>
             )}
-            <TableContainer component={Paper} sx={{ mt: 2 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>ID</TableCell>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Product Name</TableCell>
-                    <TableCell>Total Price</TableCell>
-                    <TableCell>Amount Paid</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {entry.transactions.map(txn => (
-                    <TableRow key={txn.id}>
-                      <TableCell>{txn.id}</TableCell>
-                      <TableCell>{new Date(txn.transactionDate || txn.transaction_date).toISOString().split('T')[0]}</TableCell>
-                      <TableCell>{txn.transactionType || txn.transaction_type}</TableCell>
-                      <TableCell>{txn.productName}</TableCell>
-                      <TableCell>{txn.totalPrice ?? txn.total_price ?? ''}</TableCell>
-                      <TableCell>{txn.amountPaid ?? txn.amount_paid ?? ''}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Day-wise Ledger</Typography>
+              {entry.orderedDates && entry.orderedDates.length > 0 ? (
+                entry.orderedDates.map(date => (
+                  <Box key={date} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>Date: {date}</Typography>
+                      <Typography variant="body2" color={entry.days[date]?.dueTake > 0 ? 'error' : 'primary'}>
+                        Due: {entry.days[date]?.dueTake > 0 ? `₹${(entry.days[date]?.dueTake || 0).toFixed(2)}` : `₹${(entry.days[date]?.dueGive || 0).toFixed(2)}`}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" display="block" sx={{ mb: 1 }}>
+                      Transactions Net: {entry.days[date]?.txnNet || 0} &nbsp;•&nbsp; Adjustments Effective: {entry.days[date]?.adjNet || 0}
+                    </Typography>
+                    <TableContainer component={Paper}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>ID</TableCell>
+                            <TableCell>Type</TableCell>
+                            <TableCell>Product Name</TableCell>
+                            <TableCell>Total Price</TableCell>
+                            <TableCell>Amount Paid</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {(entry.days[date]?.txns || []).map(txn => (
+                            <TableRow key={txn.id}>
+                              <TableCell>{txn.id}</TableCell>
+                              <TableCell>{txn.transactionType || txn.transaction_type}</TableCell>
+                              <TableCell>{txn.productName}</TableCell>
+                              <TableCell>{txn.totalPrice ?? txn.total_price ?? ''}</TableCell>
+                              <TableCell>{txn.amountPaid ?? txn.amount_paid ?? ''}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                ))
+              ) : (
+                <Typography variant="body2" color="textSecondary">No transactions available.</Typography>
+              )}
+            </Box>
+
           </AccordionDetails>
         </Accordion>
       ))}

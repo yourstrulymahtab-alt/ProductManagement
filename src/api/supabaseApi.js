@@ -100,16 +100,19 @@ export const addTransaction = async (txn) => {
     const { error } = await supabase.from('transactions').update(updateFields).eq('id', id);
     if (error) throw error;
 
-    // If amountPaid changed, record adjustment
+    // If amountPaid changed, record adjustment (effective on the transaction's day)
     if (updateFields.amountPaid !== undefined && updateFields.amountPaid !== currentTxn.amount_paid) {
       await addLedgerAdjustment({
         person_name: currentTxn.person_name,
         contact: currentTxn.contact,
         adjustment_amount: updateFields.amountPaid - currentTxn.amount_paid,
         adjustment_date: new Date().toISOString(),
+        // apply correction to the original transaction day (not the edit time)
+        effective_date: new Date(currentTxn.transactionDate || currentTxn.transaction_date).toISOString().split('T')[0],
         reason: 'Manual adjustment'
       });
     }
+
   } else {
     // For sell transactions, check stock before inserting
     if (txn.transaction_type === 'sell') {
@@ -205,15 +208,19 @@ export const getLedgerAdjustments = async (personName, contact) => {
     .select('*')
     .eq('person_name', personName)
     .eq('contact', contact)
-    .order('adjustment_date', { ascending: false });
+    // Order by the date the adjustment should be applied
+    .order('effective_date', { ascending: false });
   if (error) throw error;
   return data;
 };
 
 export const addLedgerAdjustment = async (adjustment) => {
+  // adjustment should include effective_date for day-wise ledger.
+  // If it is omitted, DB default will set it from adjustment_date.
   const { error } = await supabase.from('ledger_adjustments').insert([adjustment]);
   if (error) throw error;
 };
+
 
 // PRODUCT CHANGES LOGGING
 export const logProductChange = async (productId, changeType, oldStock = null, newStock = null, oldCostPrice = null, newCostPrice = null, oldSellPrice = null, newSellPrice = null) => {
