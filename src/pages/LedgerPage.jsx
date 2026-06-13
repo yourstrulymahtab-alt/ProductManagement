@@ -378,12 +378,8 @@ function LedgerPage() {
                   <Box key={date} sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>Date: {date}</Typography>
-                    <Typography variant="body2" color={entry.days[date]?.dueTake > 0 ? 'error' : 'primary'}>
-                        Past Due: {entry.days[date]?.dueTake > 0 ? `₹${(entry.days[date]?.dueTake || 0).toFixed(2)}` : '₹0.00'}
-                      </Typography>
-                    <Typography variant="body2" color={entry.days[date]?.dueGive > 0 ? 'primary' : 'textSecondary'} sx={{ mb: 0.5 }}>
-                        Credit: {entry.days[date]?.dueGive > 0 ? `₹${(entry.days[date]?.dueGive || 0).toFixed(2)}` : '₹0.00'}
-                      </Typography>
+
+
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
                         Total Due at {date}: {(() => {
                           const t = entry.days[date]?.dueTake || 0;
@@ -398,7 +394,7 @@ function LedgerPage() {
                       Transactions Net: {entry.days[date]?.txnNet || 0} &nbsp;•&nbsp; Adjustments Effective: {entry.days[date]?.adjNet || 0}
                     </Typography>
                     <Typography variant="caption" display="block" sx={{ mb: 1 }}>
-                      Net (Txn Net + Adj Effective): {(() => {
+                      Net: {(() => {
                         const txnNet = Number(entry.days[date]?.txnNet || 0);
                         const adjNet = Number(entry.days[date]?.adjNet || 0);
                         const v = txnNet + adjNet;
