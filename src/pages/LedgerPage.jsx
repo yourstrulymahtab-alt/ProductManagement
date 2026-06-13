@@ -80,8 +80,10 @@ function LedgerPage() {
           adjByDay[effDay] += Number(adj.adjustment_amount || 0);
         });
 
+        // Sort in ascending date, then we'll render latest -> oldest in the UI by reversing
         const orderedDates = Array.from(new Set(Object.keys(days).concat(Object.keys(adjByDay)))).sort();
         map[key].orderedDates = orderedDates;
+
 
         let signedRunningNet = 0; // signedNet = give - take
         let take = 0;
@@ -162,7 +164,8 @@ function LedgerPage() {
     }
   };
 
-  const toggleExpansion = async (person, contact) => {
+    const toggleExpansion = async (person, contact) => {
+
     const key = `${person}|${contact}`;
     const isExpanded = expandedPersons[key];
     setExpandedPersons(prev => ({ ...prev, [key]: !isExpanded }));
@@ -352,10 +355,12 @@ function LedgerPage() {
                       <TableBody>
                         {personAdjustmentHistory[`${entry.person}|${entry.contact}`].map(adj => (
                           <TableRow key={adj.id}>
-                            <TableCell>{new Date(adj.adjustment_date).getDate()+"/"+(new Date(adj.adjustment_date).getMonth()+1)+"/"+new Date(adj.adjustment_date).getFullYear()}</TableCell>
+                            <TableCell>{new Date(adj.effective_date ?? adj.adjustment_date).getDate()+"/"+(new Date(adj.effective_date ?? adj.adjustment_date).getMonth()+1)+"/"+new Date(adj.effective_date ?? adj.adjustment_date).getFullYear()}</TableCell>
                             <TableCell>{adj.adjustment_amount}</TableCell>
                             <TableCell>{adj.reason}</TableCell>
+                            <TableCell>{new Date(adj.adjustment_date).toISOString().split('T')[0]}</TableCell>
                           </TableRow>
+
                         ))}
                       </TableBody>
                     </Table>
@@ -368,17 +373,41 @@ function LedgerPage() {
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Day-wise Ledger</Typography>
               {entry.orderedDates && entry.orderedDates.length > 0 ? (
-                entry.orderedDates.map(date => (
+                [...entry.orderedDates].sort().reverse().map(date => (
+
                   <Box key={date} sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>Date: {date}</Typography>
-                      <Typography variant="body2" color={entry.days[date]?.dueTake > 0 ? 'error' : 'primary'}>
-                        Due: {entry.days[date]?.dueTake > 0 ? `₹${(entry.days[date]?.dueTake || 0).toFixed(2)}` : `₹${(entry.days[date]?.dueGive || 0).toFixed(2)}`}
+                    <Typography variant="body2" color={entry.days[date]?.dueTake > 0 ? 'error' : 'primary'}>
+                        Past Due: {entry.days[date]?.dueTake > 0 ? `₹${(entry.days[date]?.dueTake || 0).toFixed(2)}` : '₹0.00'}
                       </Typography>
+                    <Typography variant="body2" color={entry.days[date]?.dueGive > 0 ? 'primary' : 'textSecondary'} sx={{ mb: 0.5 }}>
+                        Credit: {entry.days[date]?.dueGive > 0 ? `₹${(entry.days[date]?.dueGive || 0).toFixed(2)}` : '₹0.00'}
+                      </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                        Total Due at {date}: {(() => {
+                          const t = entry.days[date]?.dueTake || 0;
+                          const g = entry.days[date]?.dueGive || 0;
+                          const net = t - g;
+                          return `₹${net.toFixed(2)}`;
+                        })()}
+                      </Typography>
+
                     </Box>
                     <Typography variant="caption" display="block" sx={{ mb: 1 }}>
                       Transactions Net: {entry.days[date]?.txnNet || 0} &nbsp;•&nbsp; Adjustments Effective: {entry.days[date]?.adjNet || 0}
                     </Typography>
+                    <Typography variant="caption" display="block" sx={{ mb: 1 }}>
+                      Net (Txn Net + Adj Effective): {(() => {
+                        const txnNet = Number(entry.days[date]?.txnNet || 0);
+                        const adjNet = Number(entry.days[date]?.adjNet || 0);
+                        const v = txnNet + adjNet;
+                        return `₹${v.toFixed(2)}`;
+                      })()}
+                    </Typography>
+
+
+
                     <TableContainer component={Paper}>
                       <Table size="small">
                         <TableHead>
